@@ -58,6 +58,7 @@ if [ -d project/.git ]; then
     cp "$ENV_BACKUP" project/.env.production
     chmod 600 project/.env.production
     rm -f "$ENV_BACKUP"
+    rm -f "$OLD_PROJECT/.env.production" || true
   fi
   cd project
 else

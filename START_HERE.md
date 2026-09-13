@@ -39,12 +39,18 @@ sudo mkdir -p /Data/api-mvp/{mysql,brand-assets,backups/mysql}
 sudo certbot certonly --standalone -d your-domain.com
 ```
 
-### 3️⃣ 克隆项目 (2分钟)
+### 3️⃣ 克隆项目到 /Data 目录 (2分钟)
 
 ```bash
-cd /opt
-git clone https://github.com/your-org/api-gateway.git
-cd api-gateway
+# 进入数据目录（所有项目文件都在这里，避免污染服务器其他目录）
+cd /Data/api-mvp
+
+# 克隆项目
+git clone https://github.com/your-org/api-gateway.git project
+cd project
+
+# 验证项目结构
+ls -la docker-compose.prod.yml scripts/
 ```
 
 ### 4️⃣ 自动部署 (15分钟)

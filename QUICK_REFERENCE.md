@@ -7,26 +7,35 @@
 ## 📌 5步快速部署
 
 ```bash
-# 1️⃣ 克隆项目
-git clone https://github.com/YOUR_ORG/api-gateway.git
-cd api-gateway
+# 1️⃣ 进入数据目录（所有文件都在/Data下）
+cd /Data/api-mvp
 
-# 2️⃣ 生成配置（交互式）
+# 2️⃣ 克隆项目
+git clone https://github.com/YOUR_ORG/api-gateway.git project
+cd project
+
+# 3️⃣ 生成配置（交互式）
 ./scripts/gen-env-production.sh
 
-# 3️⃣ 执行部署（自动化）
+# 4️⃣ 执行部署（自动化）
 ./scripts/deploy-prod.sh --build
 
-# 4️⃣ 创建管理员
+# 5️⃣ 创建管理员
 ./scripts/init-admin.sh admin 'YourPassword123!'
 
-# 5️⃣ 配置Nginx
+# 6️⃣ 配置Nginx
 sudo cp nginx/api-gateway.conf.example /etc/nginx/sites-available/api-gateway
 sudo nano /etc/nginx/sites-available/api-gateway  # 编辑域名和证书
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
 **完成！** 访问 https://your-domain.com
+
+**注意**: 所有数据存储在 `/Data/api-mvp/` 下：
+- 项目代码: `/Data/api-mvp/project/`
+- MySQL数据: `/Data/api-mvp/mysql/` (Docker卷)
+- 品牌资源: `/Data/api-mvp/brand-assets/`
+- 数据备份: `/Data/api-mvp/backups/mysql/`
 
 ---
 

@@ -81,27 +81,48 @@ sudo usermod -aG docker $USER
 # 重新登录使配置生效
 newgrp docker
 
-# 创建数据目录
-sudo mkdir -p /Data/api-mvp/{mysql,brand-assets,backups/mysql}
+# ===== 关键：创建项目数据结构 =====
+# 所有项目文件都在 /Data 下，避免污染服务器其他目录
+sudo mkdir -p /Data/api-mvp/{project,mysql,brand-assets,backups/mysql}
 
 # 设置权限（允许Docker容器写入）
 sudo chmod 777 /Data/api-mvp/{mysql,brand-assets,backups}
+
+# ===== 目录结构说明 =====
+# /Data/api-mvp/
+#   ├── project/           ← 项目代码将克隆到这里
+#   ├── mysql/             ← MySQL容器数据卷（自动创建）
+#   ├── brand-assets/      ← 品牌资源卷
+#   └── backups/
+#       └── mysql/         ← 数据库备份目录
 ```
 
-### 2.2 克隆项目
+### 2.2 克隆项目到 /Data 目录
 
 ```bash
-# 选择部署目录
-cd /opt  # 或其他合适的位置
+# 进入数据目录（所有项目文件都在这里）
+cd /Data/api-mvp
 
-# 克隆GitHub仓库
-git clone https://github.com/YOUR_USERNAME/api-gateway.git
-cd api-gateway
+# 克隆GitHub仓库到 project 子目录
+git clone https://github.com/YOUR_USERNAME/api-gateway.git project
+cd project
 
 # 验证关键文件存在
 ls -la scripts/*.sh              # 查看脚本
 ls -la docker-compose.prod.yml   # Docker Compose配置
 ls -la .env.production.example   # 配置模板
+
+# 最终目录结构
+# /Data/api-mvp/
+#   ├── project/                 ← 项目代码在这里
+#   │   ├── backend/
+#   │   ├── frontend/
+#   │   ├── scripts/
+#   │   ├── docker-compose.prod.yml
+#   │   └── ...
+#   ├── mysql/                   ← MySQL数据卷
+#   ├── brand-assets/            ← 品牌资源卷
+#   └── backups/mysql/           ← 数据库备份
 ```
 
 ### 2.3 准备TLS证书
@@ -306,8 +327,8 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs -f bac
 当代码有更新时：
 
 ```bash
-# 进入项目目录
-cd /opt/api-gateway
+# 进入项目目录（在/Data下）
+cd /Data/api-mvp/project
 
 # 拉取最新代码
 git pull origin main

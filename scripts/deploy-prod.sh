@@ -34,7 +34,10 @@ brand_asset_dir_host="$(production_env_value BRAND_ASSET_DIR_HOST || true)"
 backup_dir="$(production_env_value BACKUP_DIR || true)"
 [[ "$expected_head" == "f9a0b1c2d3e4" ]] || { echo "EXPECTED_ALEMBIC_HEAD 必须为 f9a0b1c2d3e4" >&2; exit 1; }
 [[ -n "$frontend_origin" && -n "$public_gateway_base_url" ]] || { echo "必须配置正式域名" >&2; exit 1; }
-[[ -r "$tls_cert_file" && -r "$tls_key_file" ]] || { echo "TLS 证书或私钥不可读" >&2; exit 1; }
+# TLS 检查（HTTP 部署时可跳过）
+if [[ -n "$tls_cert_file" && -n "$tls_key_file" ]]; then
+  [[ -r "$tls_cert_file" && -r "$tls_key_file" ]] || { echo "TLS 证书或私钥不可读" >&2; exit 1; }
+fi
 mysql_data_dir="${mysql_data_dir:-/Data/earthquake-api-gateway/mysql}"
 brand_asset_dir_host="${brand_asset_dir_host:-/Data/earthquake-api-gateway/brand-assets}"
 backup_dir="${backup_dir:-/Data/earthquake-api-gateway/backups/mysql}"

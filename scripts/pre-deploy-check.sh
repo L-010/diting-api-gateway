@@ -47,6 +47,7 @@ echo ""
 echo_info "【1】环境文件检查"
 if [[ ! -f .env.production ]]; then
   check_fail "缺少 .env.production 文件"
+  exit 1
 else
   check_pass ".env.production 文件存在"
 
@@ -196,7 +197,7 @@ echo_info "【8】Python 依赖检查"
 if [[ -f backend/requirements.txt ]]; then
   check_pass "✓ requirements.txt 存在"
   # 检查关键依赖
-  key_deps=("fastapi" "sqlalchemy" "PyMySQL" "alembic" "pydantic" "cryptography")
+  key_deps=("fastapi" "sqlalchemy" "PyMySQL" "alembic" "pydantic-settings" "cryptography")
   for dep in "${key_deps[@]}"; do
     if grep -q "^$dep" backend/requirements.txt; then
       check_pass "  ✓ $dep"

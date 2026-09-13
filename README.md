@@ -1,5 +1,7 @@
 # API Gateway 开发者平台 MVP
 
+生产服务器部署只参考 [SERVER_DEPLOY_COMMANDS.md](SERVER_DEPLOY_COMMANDS.md)。当前指南是无 TLS 的 HTTP 直连流程，包含配置生成、部署、验证、管理员初始化和故障排查；其他部署文档不作为本次服务器部署依据。
+
 本项目是一个本地可执行的开发者 API 平台 MVP：公开用户提交注册申请，管理员审批后，用户生成一个全局 API Key，并通过统一 Gateway 调用全部已发布工具。管理员可以接入多工具、配置每个工具唯一部署服务器，导入 OpenAPI/Swagger，发布路由，并查看调用监控与审计。
 
 核心调用模型：

@@ -1,263 +1,168 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-# 生成安全的生产环境配置文件
-# 用法: ./scripts/gen-env-production.sh
+# 生成 HTTP 直连模式的生产配置文件。
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# 颜色输出
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-echo_error() { echo -e "${RED}✗ $*${NC}" >&2; }
-echo_success() { echo -e "${GREEN}✓ $*${NC}"; }
-echo_info() { echo -e "${BLUE}ℹ $*${NC}"; }
-echo_warn() { echo -e "${YELLOW}⚠ $*${NC}"; }
-
-# 检查依赖
-check_dependencies() {
-  local deps=("openssl" "python3")
-  for cmd in "${deps[@]}"; do
-    if ! command -v "$cmd" &> /dev/null; then
-      echo_error "缺少依赖: $cmd"
-      exit 1
-    fi
-  done
+die() {
+  echo "错误: $*" >&2
+  exit 1
 }
 
-# URL编码函数
-urlencode() {
-  python3 -c "import urllib.parse; print(urllib.parse.quote('$1', safe=''))"
-}
+command -v openssl >/dev/null 2>&1 || die "缺少 openssl，请先安装。"
+command -v python3 >/dev/null 2>&1 || die "缺少 python3，请先安装。"
+python3 -c 'from cryptography.fernet import Fernet' >/dev/null 2>&1 || die "python3 缺少 cryptography，请先安装后再生成配置。"
 
-# 生成随机字符串
-gen_random_b64() {
-  local length="${1:-32}"
-  openssl rand -base64 "$length" | tr -d '\n'
-}
+if [[ -f .env.production ]]; then
+  read -r -p ".env.production 已存在，是否覆盖？(y/N): " answer
+  [[ "$answer" =~ ^[Yy]$ ]] || { echo "已取消。"; exit 0; }
+fi
 
-# 生成Fernet密钥
-gen_fernet_key() {
-  python3 << 'EOF'
-from cryptography.fernet import Fernet
-print(Fernet.generate_key().decode())
-EOF
-}
-
-# 生成APP_SECRET_KEY (32字节)
-gen_app_secret_key() {
+random_secret() {
   openssl rand -base64 32 | tr -d '\n'
 }
 
-# 生成API_KEY_PEPPER (24字节)
-gen_api_key_pepper() {
-  openssl rand -base64 24 | tr -d '\n'
+random_fernet() {
+  python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode(), end="")'
 }
 
-check_dependencies
+random_hex() {
+  openssl rand -hex 24 | tr -d '\n'
+}
 
-echo_info "=========================================="
-echo_info "生产环境配置文件生成工具"
-echo_info "=========================================="
-echo ""
+validate_origin() {
+  local value="$1"
+  python3 - "$value" <<'PY'
+from sys import argv
+from urllib.parse import urlparse
 
-# 检查模板文件
-if [[ ! -f .env.production.example ]]; then
-  echo_error ".env.production.example 文件不存在"
-  exit 1
-fi
+value = argv[1].strip().rstrip("/")
+parsed = urlparse(value)
+if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+    raise SystemExit("地址必须是带主机名的 http/https 地址")
+if parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {"", "/"}:
+    raise SystemExit("地址不能包含凭据、路径、查询参数或片段")
+PY
+}
 
-# 检查目标文件是否已存在
-if [[ -f .env.production ]]; then
-  echo_warn ".env.production 已存在"
-  read -p "是否覆盖? (y/N): " -r
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo_info "已取消"
-    exit 0
-  fi
-fi
+validate_upstream_allowed() {
+  python3 - "$1" "$2" <<'PY'
+from sys import argv
+from urllib.parse import urlparse
 
-echo_info "开始生成必要的密钥和配置..."
-echo ""
+hostname = urlparse(argv[1]).hostname
+allowed = {item.strip().lower() for item in argv[2].split(",") if item.strip()}
+if not hostname or hostname.lower() not in allowed:
+    raise SystemExit("TomoDD 地址的主机不在允许列表中")
+PY
+}
 
-# 生成密钥
-echo_info "[1/4] 生成加密密钥..."
-APP_SECRET_KEY=$(gen_app_secret_key)
-echo_success "  APP_SECRET_KEY: ${APP_SECRET_KEY:0:16}..."
+read -r -p "前端访问地址 [http://10.2.210.10:3000]: " FRONTEND_ORIGIN
+FRONTEND_ORIGIN="${FRONTEND_ORIGIN:-http://10.2.210.10:3000}"
+validate_origin "$FRONTEND_ORIGIN" || die "前端访问地址格式不正确。"
+read -r -p "公开网关地址 [http://10.2.210.10:8000]: " PUBLIC_GATEWAY_BASE_URL
+PUBLIC_GATEWAY_BASE_URL="${PUBLIC_GATEWAY_BASE_URL:-http://10.2.210.10:8000}"
+validate_origin "$PUBLIC_GATEWAY_BASE_URL" || die "公开网关地址格式不正确。"
+read -r -p "TomoDD 上游地址 [http://host.docker.internal:18000]: " TOMODD_BASE_URL
+TOMODD_BASE_URL="${TOMODD_BASE_URL:-http://host.docker.internal:18000}"
+validate_origin "$TOMODD_BASE_URL" || die "TomoDD 上游地址格式不正确。"
+read -r -p "允许的上游主机 [host.docker.internal,127.0.0.1,localhost]: " ALLOWED_UPSTREAM_HOSTS
+ALLOWED_UPSTREAM_HOSTS="${ALLOWED_UPSTREAM_HOSTS:-host.docker.internal,127.0.0.1,localhost}"
+validate_upstream_allowed "$TOMODD_BASE_URL" "$ALLOWED_UPSTREAM_HOSTS" || die "允许的上游主机配置不匹配。"
+read -r -s -p "TomoDD 上游 Token（没有可留空）: " TOMODD_UPSTREAM_TOKEN
+echo
 
-APP_ENCRYPTION_KEY=$(gen_fernet_key)
-echo_success "  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:0:16}..."
+read -r -p "数据库用户密码（留空自动生成，仅允许字母和数字）: " MYSQL_PASSWORD
+MYSQL_PASSWORD="${MYSQL_PASSWORD:-$(random_hex)}"
+[[ "$MYSQL_PASSWORD" =~ ^[A-Za-z0-9]+$ ]] || die "数据库用户密码只能包含字母和数字，以避免 URL 编码错误。"
 
-API_KEY_PEPPER=$(gen_api_key_pepper)
-echo_success "  API_KEY_PEPPER: ${API_KEY_PEPPER:0:16}..."
+read -r -p "MySQL root 密码（留空自动生成，仅允许字母和数字）: " MYSQL_ROOT_PASSWORD
+MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-$(random_hex)}"
+[[ "$MYSQL_ROOT_PASSWORD" =~ ^[A-Za-z0-9]+$ ]] || die "MySQL root 密码只能包含字母和数字。"
+[[ "$MYSQL_PASSWORD" != "$MYSQL_ROOT_PASSWORD" ]] || die "数据库用户密码和 root 密码必须不同。"
 
-# 数据库配置
-echo ""
-echo_info "[2/4] 数据库配置..."
-read -p "数据库名称 [api_gateway]: " MYSQL_DATABASE
-MYSQL_DATABASE="${MYSQL_DATABASE:-api_gateway}"
+APP_SECRET_KEY="$(random_secret)"
+APP_ENCRYPTION_KEY="$(random_fernet)"
+API_KEY_PEPPER="$(random_secret)"
 
-read -p "数据库用户 [api_user]: " MYSQL_USER
-MYSQL_USER="${MYSQL_USER:-api_user}"
+export APP_SECRET_KEY APP_ENCRYPTION_KEY API_KEY_PEPPER
+export MYSQL_PASSWORD MYSQL_ROOT_PASSWORD
+export FRONTEND_ORIGIN PUBLIC_GATEWAY_BASE_URL TOMODD_BASE_URL ALLOWED_UPSTREAM_HOSTS TOMODD_UPSTREAM_TOKEN
 
-read -sp "数据库用户密码: " MYSQL_PASSWORD
-echo ""
-if [[ -z "$MYSQL_PASSWORD" ]]; then
-  MYSQL_PASSWORD=$(gen_random_b64 16)
-  echo_info "已生成随机密码"
-fi
+python3 - <<'PY'
+from pathlib import Path
+import os
 
-read -sp "MySQL root密码: " MYSQL_ROOT_PASSWORD
-echo ""
-if [[ -z "$MYSQL_ROOT_PASSWORD" ]]; then
-  MYSQL_ROOT_PASSWORD=$(gen_random_b64 16)
-  echo_info "已生成随机root密码"
-fi
+values = {
+    "APP_ENV": "production",
+    "APP_SECRET_KEY": os.environ["APP_SECRET_KEY"],
+    "APP_ENCRYPTION_KEY": os.environ["APP_ENCRYPTION_KEY"],
+    "API_KEY_PEPPER": os.environ["API_KEY_PEPPER"],
+    "MYSQL_DATABASE": "api_gateway",
+    "MYSQL_USER": "api_user",
+    "MYSQL_PASSWORD": os.environ["MYSQL_PASSWORD"],
+    "MYSQL_ROOT_PASSWORD": os.environ["MYSQL_ROOT_PASSWORD"],
+    "DATABASE_URL": f"mysql+pymysql://api_user:{os.environ['MYSQL_PASSWORD']}@mysql:3306/api_gateway?charset=utf8mb4",
+    "ALLOWED_UPSTREAM_HOSTS": os.environ["ALLOWED_UPSTREAM_HOSTS"],
+    "TOMODD_BASE_URL": os.environ["TOMODD_BASE_URL"],
+    "TOMODD_UPSTREAM_TOKEN": os.environ["TOMODD_UPSTREAM_TOKEN"],
+    "MAX_UPLOAD_BYTES": "104857600",
+    "MAX_DOWNLOAD_BYTES": "1073741824",
+    "MAX_REMOTE_FILE_BYTES": "53687091200",
+    "FILE_DOWNLOAD_CONCURRENCY_PER_USER": "4",
+    "FILE_DOWNLOAD_CONCURRENCY_PER_TOOL": "16",
+    "FILE_DOWNLOAD_AUTHORIZATION_MINUTES": "5",
+    "FILE_DOWNLOAD_LEASE_SECONDS": "180",
+    "FILE_SYNC_POLL_SECONDS": "15",
+    "FILE_VERIFY_INTERVAL_SECONDS": "86400",
+    "STORAGE_WATERMARK_MAX_AGE_SECONDS": "300",
+    "FILE_SYNC_MANIFEST_MAX_BYTES": "1048576",
+    "FILE_SYNC_MANIFEST_MAX_ITEMS": "1000",
+    "BRAND_ASSET_DIR": "/app/data/brand-assets",
+    "FRONTEND_ORIGIN": os.environ["FRONTEND_ORIGIN"],
+    "PUBLIC_GATEWAY_BASE_URL": os.environ["PUBLIC_GATEWAY_BASE_URL"],
+    "SESSION_COOKIE_NAME": "agw_session",
+    "SECURE_COOKIES": "false",
+    "ACCESS_TOKEN_MINUTES": "480",
+    "LOGIN_PROTECTION_ENABLED": "true",
+    "LOGIN_FAILURE_LIMIT": "5",
+    "LOCK_MINUTES": "15",
+    "CALL_LOG_RETENTION_DAYS": "90",
+    "SMTP_HOST": "",
+    "SMTP_PORT": "587",
+    "SMTP_USERNAME": "",
+    "SMTP_PASSWORD": "",
+    "SMTP_FROM": "",
+    "SMTP_USE_TLS": "true",
+    "SMTP_TIMEOUT_SECONDS": "10",
+    "EMAIL_OUTBOX_MAX_ATTEMPTS": "5",
+    "SUPPORT_CONTACT": "",
+    "EMAIL_TEST_MODE": "false",
+    "EXPECTED_ALEMBIC_HEAD": "a6b7c8d9e0f1",
+    "MYSQL_DATA_DIR": "/Data/earthquake-api-gateway/mysql",
+    "BRAND_ASSET_DIR_HOST": "/Data/earthquake-api-gateway/brand-assets",
+    "BACKUP_DIR": "/Data/earthquake-api-gateway/backups/mysql",
+    "BACKUP_RETENTION_DAYS": "14",
+    "BACKEND_PORT": "8000",
+    "FRONTEND_PORT": "3000",
+    "COMPOSE_PROJECT_NAME": "earthquake-api-gateway",
+}
 
-# URL编码密码
-MYSQL_PASSWORD_ENCODED=$(urlencode "$MYSQL_PASSWORD")
-DATABASE_URL="mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD_ENCODED}@mysql:3306/${MYSQL_DATABASE}?charset=utf8mb4"
+def quote(value: str) -> str:
+    simple = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/,@%+?=-"
+    if value == "" or any(ch not in simple for ch in value):
+        return "'" + value.replace("'", "'\\''") + "'"
+    return value
 
-echo_success "  数据库: $MYSQL_DATABASE"
-echo_success "  用户: $MYSQL_USER"
+content = "# 由 scripts/gen-env-production.sh 生成，请勿提交到 Git。\n"
+content += "\n".join(f"{key}={quote(value)}" for key, value in values.items()) + "\n"
+temporary = Path(".env.production.tmp")
+temporary.write_text(content, encoding="utf-8", newline="\n")
+temporary.replace(Path(".env.production"))
+PY
 
-# 网络和域名配置
-echo ""
-echo_info "[3/4] 网络和域名配置..."
-read -p "服务器域名 (如: api.example.com): " SERVER_NAME
-if [[ -z "$SERVER_NAME" ]]; then
-  echo_error "域名不能为空"
-  exit 1
-fi
-
-FRONTEND_ORIGIN="https://${SERVER_NAME}"
-PUBLIC_GATEWAY_BASE_URL="https://${SERVER_NAME}"
-
-echo_success "  服务器域名: $SERVER_NAME"
-echo_success "  前端源: $FRONTEND_ORIGIN"
-
-read -p "TLS证书路径 [/etc/ssl/api-gateway/fullchain.pem]: " TLS_CERT_FILE
-TLS_CERT_FILE="${TLS_CERT_FILE:-/etc/ssl/api-gateway/fullchain.pem}"
-
-read -p "TLS私钥路径 [/etc/ssl/api-gateway/privkey.pem]: " TLS_KEY_FILE
-TLS_KEY_FILE="${TLS_KEY_FILE:-/etc/ssl/api-gateway/privkey.pem}"
-
-echo_success "  TLS证书: $TLS_CERT_FILE"
-
-# 上游服务配置
-echo ""
-echo_info "[4/4] 上游服务配置..."
-read -p "TOMODD上游地址 (如: https://tomodd.example.com): " TOMODD_BASE_URL
-if [[ -z "$TOMODD_BASE_URL" ]]; then
-  TOMODD_BASE_URL="https://replace-with-approved-upstream"
-  echo_warn "  已使用占位值，需要手动修改"
-fi
-
-read -sp "TOMODD上游Token: " TOMODD_UPSTREAM_TOKEN
-echo ""
-
-# 可选：SMTP配置
-echo ""
-read -p "是否配置SMTP邮箱? (y/N): " -r
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  read -p "SMTP主机: " SMTP_HOST
-  read -p "SMTP端口 [587]: " SMTP_PORT
-  SMTP_PORT="${SMTP_PORT:-587}"
-  read -p "SMTP用户: " SMTP_USERNAME
-  read -sp "SMTP密码: " SMTP_PASSWORD
-  echo ""
-  read -p "发件人地址: " SMTP_FROM
-else
-  SMTP_HOST=""
-  SMTP_PORT="587"
-  SMTP_USERNAME=""
-  SMTP_PASSWORD=""
-  SMTP_FROM=""
-fi
-
-# 生成.env.production
-echo ""
-echo_info "生成 .env.production..."
-
-cp .env.production.example .env.production.tmp
-
-# 替换密钥
-sed -i "s|^APP_SECRET_KEY=.*|APP_SECRET_KEY=${APP_SECRET_KEY}|" .env.production.tmp
-sed -i "s|^APP_ENCRYPTION_KEY=.*|APP_ENCRYPTION_KEY=${APP_ENCRYPTION_KEY}|" .env.production.tmp
-sed -i "s|^API_KEY_PEPPER=.*|API_KEY_PEPPER=${API_KEY_PEPPER}|" .env.production.tmp
-
-# 替换数据库配置
-sed -i "s|^MYSQL_DATABASE=.*|MYSQL_DATABASE=${MYSQL_DATABASE}|" .env.production.tmp
-sed -i "s|^MYSQL_USER=.*|MYSQL_USER=${MYSQL_USER}|" .env.production.tmp
-sed -i "s|^MYSQL_PASSWORD=.*|MYSQL_PASSWORD=${MYSQL_PASSWORD}|" .env.production.tmp
-sed -i "s|^MYSQL_ROOT_PASSWORD=.*|MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}|" .env.production.tmp
-sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${DATABASE_URL}|" .env.production.tmp
-
-# 替换网络配置
-sed -i "s|^FRONTEND_ORIGIN=.*|FRONTEND_ORIGIN=${FRONTEND_ORIGIN}|" .env.production.tmp
-sed -i "s|^PUBLIC_GATEWAY_BASE_URL=.*|PUBLIC_GATEWAY_BASE_URL=${PUBLIC_GATEWAY_BASE_URL}|" .env.production.tmp
-sed -i "s|^SERVER_NAME=.*|SERVER_NAME=${SERVER_NAME}|" .env.production.tmp
-sed -i "s|^TLS_CERT_FILE=.*|TLS_CERT_FILE=${TLS_CERT_FILE}|" .env.production.tmp
-sed -i "s|^TLS_KEY_FILE=.*|TLS_KEY_FILE=${TLS_KEY_FILE}|" .env.production.tmp
-
-# 替换上游服务配置
-sed -i "s|^TOMODD_BASE_URL=.*|TOMODD_BASE_URL=${TOMODD_BASE_URL}|" .env.production.tmp
-sed -i "s|^TOMODD_UPSTREAM_TOKEN=.*|TOMODD_UPSTREAM_TOKEN=${TOMODD_UPSTREAM_TOKEN}|" .env.production.tmp
-
-# 替换SMTP配置
-if [[ -n "$SMTP_HOST" ]]; then
-  sed -i "s|^SMTP_HOST=.*|SMTP_HOST=${SMTP_HOST}|" .env.production.tmp
-  sed -i "s|^SMTP_PORT=.*|SMTP_PORT=${SMTP_PORT}|" .env.production.tmp
-  sed -i "s|^SMTP_USERNAME=.*|SMTP_USERNAME=${SMTP_USERNAME}|" .env.production.tmp
-  sed -i "s|^SMTP_PASSWORD=.*|SMTP_PASSWORD=${SMTP_PASSWORD}|" .env.production.tmp
-  sed -i "s|^SMTP_FROM=.*|SMTP_FROM=${SMTP_FROM}|" .env.production.tmp
-fi
-
-# 确保APP_ENV和EMAIL_TEST_MODE正确
-sed -i "s|^APP_ENV=.*|APP_ENV=production|" .env.production.tmp
-sed -i "s|^EMAIL_TEST_MODE=.*|EMAIL_TEST_MODE=false|" .env.production.tmp
-sed -i "s|^EXPECTED_ALEMBIC_HEAD=.*|EXPECTED_ALEMBIC_HEAD=a6b7c8d9e0f1|" .env.production.tmp
-
-# 移动文件
-mv .env.production.tmp .env.production
 chmod 600 .env.production
-
-echo_success ".env.production 已生成"
-echo ""
-echo_warn "重要信息:"
-echo_warn "  • 此文件包含敏感信息，请不要提交到版本控制"
-echo_warn "  • 文件权限已设置为 600（仅所有者可读写）"
-echo_warn "  • 请验证以下配置后再进行部署："
-echo_warn ""
-
-# 显示验证清单
-echo_info "配置验证清单:"
-echo_info "  ✓ APP_ENV = production"
-echo_info "  ✓ EMAIL_TEST_MODE = false"
-echo_info "  ✓ DATABASE_URL 使用 MySQL"
-echo_info "  ✓ EXPECTED_ALEMBIC_HEAD = a6b7c8d9e0f1"
-echo ""
-
-# 验证是否包含占位符
-if grep -qi "replace-with-\|changeme\|example\.test\|api\.example\.com" .env.production; then
-  echo_error "配置文件仍包含占位符值，请手动修改"
-  exit 1
-fi
-
-# 检查TLS证书
-if [[ ! -r "$TLS_CERT_FILE" ]] || [[ ! -r "$TLS_KEY_FILE" ]]; then
-  echo_warn "TLS证书文件不可读，请确保证书已上传到服务器"
-  echo_warn "  证书路径: $TLS_CERT_FILE"
-  echo_warn "  私钥路径: $TLS_KEY_FILE"
-fi
-
-echo_success ""
-echo_success "✓ .env.production 生成完成！"
-echo_success "接下来请执行："
-echo_success "  ./scripts/deploy-prod.sh --build"
-echo ""
+echo "已生成 .env.production（权限 600）。"
+echo "当前为 HTTP 直连模式；配置 HTTPS 后请将 SECURE_COOKIES 改为 true。"

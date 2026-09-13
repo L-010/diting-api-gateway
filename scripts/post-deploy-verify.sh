@@ -25,24 +25,26 @@ echo_info() { echo -e "${BLUE}ℹ $*${NC}"; }
 
 test_pass() {
   echo_success "$1"
-  ((TESTS_PASSED++))
+  TESTS_PASSED=$((TESTS_PASSED + 1))
 }
 
 test_fail() {
   echo_error "$1"
-  ((TESTS_FAILED++))
+  TESTS_FAILED=$((TESTS_FAILED + 1))
 }
 
 test_skip() {
   echo_warn "$1 (跳过)"
-  ((TESTS_SKIPPED++))
+  TESTS_SKIPPED=$((TESTS_SKIPPED + 1))
+}
+
+test_warn() {
+  echo_warn "$1"
 }
 
 # 获取docker compose命令
 get_docker_compose() {
-  if command -v docker-compose &> /dev/null; then
-    echo "docker-compose"
-  elif docker compose version &> /dev/null 2>&1; then
+  if docker compose version &> /dev/null 2>&1; then
     echo "docker compose"
   else
     echo ""
@@ -55,6 +57,11 @@ if [[ -z "$DC" ]]; then
   exit 1
 fi
 
+backend_port=$(grep '^BACKEND_PORT=' .env.production | cut -d'=' -f2- || true)
+frontend_port=$(grep '^FRONTEND_PORT=' .env.production | cut -d'=' -f2- || true)
+backend_port="${backend_port:-8000}"
+frontend_port="${frontend_port:-3000}"
+
 echo_info "=========================================="
 echo_info "生产部署后验证"
 echo_info "=========================================="
@@ -66,7 +73,7 @@ if $DC --env-file .env.production -f docker-compose.prod.yml ps | grep -q "Up"; 
   test_pass "Docker容器正在运行"
 
   # 检查每个容器
-  local containers=("mysql" "backend" "frontend" "email-worker" "file-worker")
+  containers=("mysql" "backend" "frontend" "email-worker" "file-worker")
   for container in "${containers[@]}"; do
     if $DC --env-file .env.production -f docker-compose.prod.yml ps "$container" | grep -q "Up"; then
       test_pass "  $container 容器运行正常"
@@ -83,14 +90,12 @@ echo ""
 # 2. MySQL数据库检查
 echo_info "【2】MySQL 数据库检查"
 if $DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
-  mysql -u api_user -p$(grep "^MYSQL_PASSWORD=" .env.production | cut -d'=' -f2) \
-  -e "SELECT 1" &>/dev/null; then
+  sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT 1"' &>/dev/null; then
   test_pass "MySQL数据库连接成功"
 
   # 检查表数量
-  local table_count=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
-    mysql -u api_user -p$(grep "^MYSQL_PASSWORD=" .env.production | cut -d'=' -f2) api_gateway \
-    -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='api_gateway'")
+  table_count=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
+    sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -s -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()"')
 
   if [[ $table_count -gt 0 ]]; then
     test_pass "  数据库表已创建 ($table_count 个表)"
@@ -99,9 +104,8 @@ if $DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
   fi
 
   # 检查迁移版本
-  local current_version=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
-    mysql -u api_user -p$(grep "^MYSQL_PASSWORD=" .env.production | cut -d'=' -f2) api_gateway \
-    -s -N -e "SELECT version_num FROM alembic_version LIMIT 1" 2>/dev/null || echo "")
+  current_version=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
+    sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -s -N -e "SELECT version_num FROM alembic_version LIMIT 1"' 2>/dev/null || echo "")
 
   if [[ -n "$current_version" ]]; then
     if [[ "$current_version" == "a6b7c8d9e0f1" ]]; then
@@ -122,11 +126,11 @@ echo ""
 echo_info "【3】后端 API 检查"
 
 # 检查/health端点
-if curl -s http://127.0.0.1:8000/health >/dev/null 2>&1; then
+if curl -s "http://127.0.0.1:${backend_port}/health" >/dev/null 2>&1; then
   test_pass "/health 端点可用"
 
-  local health_response=$(curl -s http://127.0.0.1:8000/health)
-  if echo "$health_response" | grep -q "ready"; then
+  health_response=$(curl -s "http://127.0.0.1:${backend_port}/health")
+  if echo "$health_response" | grep -q '"status":"ok"'; then
     test_pass "  后端状态: 就绪"
   else
     test_warn "  后端状态: $health_response"
@@ -136,33 +140,33 @@ else
 fi
 
 # 检查/livez端点
-if curl -s http://127.0.0.1:8000/livez >/dev/null 2>&1; then
+if curl -s "http://127.0.0.1:${backend_port}/livez" >/dev/null 2>&1; then
   test_pass "/livez 端点可用"
 else
   test_fail "/livez 端点不可用"
 fi
 
 # 检查/readyz端点（最重要的验收标准）
-if curl -s http://127.0.0.1:8000/readyz >/dev/null 2>&1; then
-  local readyz_response=$(curl -s http://127.0.0.1:8000/readyz)
+if curl -s "http://127.0.0.1:${backend_port}/readyz" >/dev/null 2>&1; then
+  readyz_response=$(curl -s "http://127.0.0.1:${backend_port}/readyz")
 
-  if echo "$readyz_response" | grep -q '"status":\s*"ready"'; then
+  if echo "$readyz_response" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ready"'; then
     test_pass "/readyz 端点 - 状态就绪"
 
     # 检查所有checks
-    if echo "$readyz_response" | grep -q '"config":\s*"ok"'; then
+    if echo "$readyz_response" | grep -Eq '"config"[[:space:]]*:[[:space:]]*"ok"'; then
       test_pass "  ✓ config check"
     else
       test_fail "  ✗ config check"
     fi
 
-    if echo "$readyz_response" | grep -q '"database":\s*"ok"'; then
+    if echo "$readyz_response" | grep -Eq '"database"[[:space:]]*:[[:space:]]*"ok"'; then
       test_pass "  ✓ database check"
     else
       test_fail "  ✗ database check"
     fi
 
-    if echo "$readyz_response" | grep -q '"migration":\s*"ok"'; then
+    if echo "$readyz_response" | grep -Eq '"migration"[[:space:]]*:[[:space:]]*"ok"'; then
       test_pass "  ✓ migration check"
     else
       test_fail "  ✗ migration check"
@@ -180,11 +184,11 @@ echo ""
 # 4. 前端验证
 echo_info "【4】前端应用检查"
 
-if curl -s -I http://127.0.0.1:3000/ | grep -q "200\|3"; then
+if curl -s -I "http://127.0.0.1:${frontend_port}/" | grep -q "200\|3"; then
   test_pass "前端应用响应正常"
 
   # 检查Next.js
-  if curl -s http://127.0.0.1:3000/ | grep -q "html\|<body"; then
+  if curl -s "http://127.0.0.1:${frontend_port}/" | grep -q "html\|<body"; then
     test_pass "  前端页面已加载"
   else
     test_warn "  无法验证前端页面内容"
@@ -206,7 +210,7 @@ $DC --env-file .env.production -f docker-compose.prod.yml exec -T backend \
 
 # 检查前端能否连接到后端（如果在容器内）
 if $DC --env-file .env.production -f docker-compose.prod.yml exec -T frontend \
-  curl -s http://backend:8000/health >/dev/null 2>&1; then
+  node -e "fetch('http://backend:8000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"; then
   test_pass "前端容器能连接到后端"
 else
   test_warn "前端容器无法连接到后端（可能正常）"
@@ -217,10 +221,12 @@ echo ""
 # 6. 文件和目录权限检查
 echo_info "【6】文件和目录权限检查"
 
-if [[ -d backend/data/brand-assets ]]; then
+brand_asset_dir=$(grep '^BRAND_ASSET_DIR_HOST=' .env.production | cut -d'=' -f2- || true)
+brand_asset_dir="${brand_asset_dir:-/Data/earthquake-api-gateway/brand-assets}"
+if [[ -d "$brand_asset_dir" ]]; then
   test_pass "品牌资源目录存在"
 
-  if [[ -w backend/data/brand-assets ]]; then
+  if [[ -w "$brand_asset_dir" ]]; then
     test_pass "  品牌资源目录可写"
   else
     test_warn "  品牌资源目录权限可能有问题"
@@ -235,13 +241,13 @@ echo ""
 echo_info "【7】服务日志检查"
 
 # 检查后端日志中是否有错误
-local backend_errors=$($DC --env-file .env.production -f docker-compose.prod.yml logs backend 2>/dev/null | grep -i "error\|exception\|failed" | wc -l)
+backend_errors=$($DC --env-file .env.production -f docker-compose.prod.yml logs backend 2>/dev/null | awk 'BEGIN {IGNORECASE=1} /error|exception|failed/ {count++} END {print count+0}')
 if [[ $backend_errors -eq 0 ]]; then
   test_pass "后端日志无错误"
 else
   test_warn "后端日志中发现 $backend_errors 条错误/异常"
   echo_info "  最近的错误："
-  $DC --env-file .env.production -f docker-compose.prod.yml logs backend 2>/dev/null | grep -i "error\|exception\|failed" | tail -3 | sed 's/^/    /'
+  $DC --env-file .env.production -f docker-compose.prod.yml logs backend 2>/dev/null | grep -i "error\|exception\|failed" | tail -3 | sed 's/^/    /' || true
 fi
 
 # 检查前端日志
@@ -257,15 +263,15 @@ echo ""
 echo_info "【8】磁盘空间检查"
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  local mysql_size=$(du -sh backend/data 2>/dev/null | cut -f1)
+  mysql_size=$(du -sh backend/data 2>/dev/null | cut -f1 || true)
   echo_info "  后端数据目录: $mysql_size"
 
   if [[ -d /Data/earthquake-api-gateway/mysql ]]; then
-    local mysql_volume=$(du -sh /Data/earthquake-api-gateway/mysql 2>/dev/null | cut -f1)
+    mysql_volume=$(du -sh /Data/earthquake-api-gateway/mysql 2>/dev/null | cut -f1)
     echo_info "  MySQL数据卷: $mysql_volume"
   fi
 
-  local available=$(df /Data 2>/dev/null | tail -1 | awk '{print $4}')
+available=$(df /Data 2>/dev/null | tail -1 | awk '{print $4}' || true)
   if [[ -n "$available" && $available -gt 1048576 ]]; then  # > 1GB
     test_pass "磁盘空间充足"
   else
@@ -281,10 +287,10 @@ echo ""
 echo_info "【9】环境配置验证"
 
 # 检查关键环境变量
-local critical_vars=("APP_ENV" "DATABASE_URL" "FRONTEND_ORIGIN" "SERVER_NAME" "TLS_CERT_FILE" "TLS_KEY_FILE")
+critical_vars=("APP_ENV" "DATABASE_URL" "FRONTEND_ORIGIN" "PUBLIC_GATEWAY_BASE_URL" "SECURE_COOKIES")
 for var in "${critical_vars[@]}"; do
   if grep -q "^${var}=" .env.production; then
-    local value=$(grep "^${var}=" .env.production | cut -d'=' -f2)
+    value=$(grep "^${var}=" .env.production | cut -d'=' -f2-)
     if [[ ${#value} -gt 50 ]]; then
       value="${value:0:47}..."
     fi
@@ -299,12 +305,12 @@ echo ""
 # 10. Nginx反代验证（如果可用）
 echo_info "【10】Nginx 反代验证"
 
-if command -v nginx &> /dev/null; then
+if command -v nginx &> /dev/null && grep -q '^SERVER_NAME=' .env.production && grep -q '^TLS_CERT_FILE=' .env.production && grep -q '^TLS_KEY_FILE=' .env.production; then
   if sudo nginx -t >/dev/null 2>&1; then
     test_pass "Nginx配置文件有效"
 
     # 尝试通过域名访问（可能需要hosts配置）
-    local server_name=$(grep "^SERVER_NAME=" .env.production | cut -d'=' -f2)
+    server_name=$(grep "^SERVER_NAME=" .env.production | cut -d'=' -f2-)
     if curl -s -k https://$server_name/health >/dev/null 2>&1; then
       test_pass "  能够通过HTTPS访问"
     else
@@ -323,9 +329,8 @@ echo ""
 echo_info "【11】数据库初始化检查"
 
 # 检查用户表
-local user_count=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
-  mysql -u api_user -p$(grep "^MYSQL_PASSWORD=" .env.production | cut -d'=' -f2) api_gateway \
-  -s -N -e "SELECT COUNT(*) FROM users" 2>/dev/null || echo "0")
+user_count=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
+  sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -s -N -e "SELECT COUNT(*) FROM users"' 2>/dev/null || echo "0")
 
 if [[ $user_count -eq 0 ]]; then
   test_pass "用户表已初始化（当前为空，正常）"
@@ -334,9 +339,8 @@ else
 fi
 
 # 检查角色表
-local role_count=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
-  mysql -u api_user -p$(grep "^MYSQL_PASSWORD=" .env.production | cut -d'=' -f2) api_gateway \
-  -s -N -e "SELECT COUNT(*) FROM roles" 2>/dev/null || echo "0")
+role_count=$($DC --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
+  sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -s -N -e "SELECT COUNT(*) FROM roles"' 2>/dev/null || echo "0")
 
 if [[ $role_count -gt 0 ]]; then
   test_pass "角色表已初始化（$role_count 个角色）"
@@ -358,9 +362,11 @@ if [[ -f scripts/backup-mysql.sh ]]; then
       test_pass "  备份执行成功"
 
       # 检查备份文件
-      if ls /Data/earthquake-api-gateway/backups/mysql/*.sql* &>/dev/null 2>&1; then
-        local latest_backup=$(ls -t /Data/earthquake-api-gateway/backups/mysql/*.sql* 2>/dev/null | head -1)
-        local backup_size=$(du -h "$latest_backup" | cut -f1)
+      backup_dir=$(grep '^BACKUP_DIR=' .env.production | cut -d'=' -f2- || true)
+      backup_dir="${backup_dir:-/Data/earthquake-api-gateway/backups/mysql}"
+      if ls "$backup_dir"/*.sql* &>/dev/null 2>&1; then
+        latest_backup=$(ls -t "$backup_dir"/*.sql* 2>/dev/null | head -1)
+        backup_size=$(du -h "$latest_backup" | cut -f1)
         test_pass "  最新备份: $latest_backup ($backup_size)"
       fi
     else
@@ -379,7 +385,7 @@ echo ""
 echo_info "=========================================="
 echo_info "验证结果汇总"
 echo_info "=========================================="
-echo -e "通过: ${GREEN}$TESTS_PASSED${NC} | 失败: ${RED}$TESTS_FAILED${NC} | 警告: ${YELLOW}$TESTS_SKIPPED${NC} | 跳过: ${YELLOW}$TESTS_SKIPPED${NC}"
+echo -e "通过: ${GREEN}$TESTS_PASSED${NC} | 失败: ${RED}$TESTS_FAILED${NC} | 跳过: ${YELLOW}$TESTS_SKIPPED${NC}"
 
 echo ""
 

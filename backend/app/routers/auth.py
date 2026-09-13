@@ -172,7 +172,7 @@ def set_session_cookies(response: Response, user: User) -> None:
         create_session_token(user.id, user.must_change_password, user.session_version),
         httponly=True,
         samesite="lax",
-        secure=settings.app_env != "development",
+        secure=settings.secure_cookies,
         max_age=settings.access_token_minutes * 60,
         path="/",
     )
@@ -181,7 +181,7 @@ def set_session_cookies(response: Response, user: User) -> None:
         create_csrf_token(),
         httponly=False,
         samesite="lax",
-        secure=settings.app_env != "development",
+        secure=settings.secure_cookies,
         max_age=settings.access_token_minutes * 60,
         path="/",
     )

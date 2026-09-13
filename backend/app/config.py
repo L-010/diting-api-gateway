@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     file_sync_manifest_max_bytes: int = Field(default=1_048_576, ge=65_536, le=10_485_760)
     file_sync_manifest_max_items: int = Field(default=1_000, ge=1, le=10_000)
     session_cookie_name: str = "agw_session"
+    # HTTP 内网部署默认关闭；启用 HTTPS 后在生产配置中显式设为 true。
+    secure_cookies: bool = False
     frontend_origin: str = "http://127.0.0.1:3000"
     public_gateway_base_url: str = ""
     brand_asset_dir: str = "./data/brand-assets"

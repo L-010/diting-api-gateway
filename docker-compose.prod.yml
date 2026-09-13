@@ -44,6 +44,8 @@ services:
       - "0.0.0.0:${BACKEND_PORT:-8000}:8000"
     volumes:
       - ${BRAND_ASSET_DIR_HOST:-/Data/earthquake-api-gateway/brand-assets}:/app/data/brand-assets
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks: [internal]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/livez', timeout=3)"]
@@ -84,6 +86,8 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       PYTHONPATH: /app/backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: ["python", "-m", "app.email_worker", "--interval", "5"]
     depends_on:
       mysql:
@@ -105,6 +109,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       PYTHONPATH: /app/backend
     command: ["python", "-m", "app.file_worker"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       mysql:
         condition: service_healthy

@@ -32,20 +32,53 @@ tls_key_file="$(production_env_value TLS_KEY_FILE || true)"
 mysql_data_dir="$(production_env_value MYSQL_DATA_DIR || true)"
 brand_asset_dir_host="$(production_env_value BRAND_ASSET_DIR_HOST || true)"
 backup_dir="$(production_env_value BACKUP_DIR || true)"
-[[ "$expected_head" == "f9a0b1c2d3e4" ]] || { echo "EXPECTED_ALEMBIC_HEAD 必须为 f9a0b1c2d3e4" >&2; exit 1; }
+backend_port="$(production_env_value BACKEND_PORT || true)"
+frontend_port="$(production_env_value FRONTEND_PORT || true)"
+secure_cookies="$(production_env_value SECURE_COOKIES || true)"
+[[ "$expected_head" == "a6b7c8d9e0f1" ]] || { echo "EXPECTED_ALEMBIC_HEAD 必须为 a6b7c8d9e0f1" >&2; exit 1; }
 [[ -n "$frontend_origin" && -n "$public_gateway_base_url" ]] || { echo "必须配置正式域名" >&2; exit 1; }
-# TLS 检查（HTTP 部署时可跳过）
-if [[ -n "$tls_cert_file" && -n "$tls_key_file" ]]; then
+backend_port="${backend_port:-8000}"
+frontend_port="${frontend_port:-3000}"
+[[ "$backend_port" =~ ^[0-9]+$ && "$backend_port" -ge 1024 && "$backend_port" -le 65535 ]] || {
+  echo "BACKEND_PORT 必须是 1024 到 65535 之间的整数" >&2
+  exit 1
+}
+[[ "$frontend_port" =~ ^[0-9]+$ && "$frontend_port" -ge 1024 && "$frontend_port" -le 65535 ]] || {
+  echo "FRONTEND_PORT 必须是 1024 到 65535 之间的整数" >&2
+  exit 1
+}
+[[ "$secure_cookies" == "true" || "$secure_cookies" == "false" ]] || {
+  echo "SECURE_COOKIES 必须为 true 或 false" >&2
+  exit 1
+}
+# TLS 检查（HTTP 部署时两个值都留空）
+if [[ -n "$tls_cert_file" || -n "$tls_key_file" ]]; then
+  [[ -n "$tls_cert_file" && -n "$tls_key_file" ]] || { echo "TLS_CERT_FILE 和 TLS_KEY_FILE 必须同时配置" >&2; exit 1; }
   [[ -r "$tls_cert_file" && -r "$tls_key_file" ]] || { echo "TLS 证书或私钥不可读" >&2; exit 1; }
+fi
+if [[ -z "$tls_cert_file" && "$secure_cookies" != "false" ]]; then
+  echo "HTTP 直连模式必须设置 SECURE_COOKIES=false" >&2
+  exit 1
+fi
+if [[ -n "$tls_cert_file" && "$secure_cookies" != "true" ]]; then
+  echo "HTTPS 模式必须设置 SECURE_COOKIES=true" >&2
+  exit 1
 fi
 mysql_data_dir="${mysql_data_dir:-/Data/earthquake-api-gateway/mysql}"
 brand_asset_dir_host="${brand_asset_dir_host:-/Data/earthquake-api-gateway/brand-assets}"
 backup_dir="${backup_dir:-/Data/earthquake-api-gateway/backups/mysql}"
-mkdir -p "$mysql_data_dir" "$brand_asset_dir_host" "$backup_dir"
+if ! mkdir -p "$mysql_data_dir" "$brand_asset_dir_host" "$backup_dir" 2>/dev/null; then
+  command -v sudo >/dev/null || { echo "无法创建数据目录，请使用 sudo 或调整目录权限" >&2; exit 1; }
+  sudo mkdir -p "$mysql_data_dir" "$brand_asset_dir_host" "$backup_dir"
+fi
 if [[ "$(id -u)" -eq 0 ]]; then
+  chown -R 999:999 "$mysql_data_dir"
   chown -R 10001:10001 "$brand_asset_dir_host"
+  chown -R 0:0 "$backup_dir"
 elif command -v sudo >/dev/null; then
+  sudo chown -R 999:999 "$mysql_data_dir"
   sudo chown -R 10001:10001 "$brand_asset_dir_host"
+  sudo chown -R "$(id -u):$(id -g)" "$backup_dir"
 else
   echo "无法设置品牌资源目录权限，请以 root 或具备 sudo 权限的账号运行" >&2
   exit 1
@@ -56,9 +89,13 @@ if [[ "$BUILD" == 1 ]]; then "${COMPOSE[@]}" build --pull; else "${COMPOSE[@]}" 
 "${COMPOSE[@]}" run --rm backend python scripts/migrate.py
 "${COMPOSE[@]}" up -d backend frontend email-worker file-worker
 for _ in $(seq 1 30); do
-  if curl -fsS "http://127.0.0.1:${BACKEND_PORT:-8000}/livez" >/dev/null; then break; fi
+  if curl -fsS "http://127.0.0.1:${backend_port}/livez" >/dev/null; then break; fi
   sleep 2
 done
-curl -fsS "http://127.0.0.1:${BACKEND_PORT:-8000}/readyz" >/dev/null
+curl -fsS "http://127.0.0.1:${backend_port}/readyz" >/dev/null
 "${COMPOSE[@]}" ps
-echo "部署完成。请确认宿主机 Nginx 已加载 nginx/api-gateway.conf.example 的正式配置。"
+if [[ -n "$tls_cert_file" ]]; then
+  echo "部署完成。请确认宿主机 Nginx 已加载正式 HTTPS 配置。"
+else
+  echo "HTTP 直连部署完成。正式上线前请配置 HTTPS、Nginx，并将 SECURE_COOKIES 改为 true。"
+fi

@@ -96,7 +96,7 @@ jobs:
     - name: Build backend image
       run: |
         echo "🔨 Building backend image..."
-        docker build -t api-gateway-backend:${{ github.sha }} -f backend/Dockerfile backend/
+        docker build -t api-gateway-backend:${{ github.sha }} -f backend/Dockerfile .
         echo "✅ Backend image built"
 
     - name: Build frontend image

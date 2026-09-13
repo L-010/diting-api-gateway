@@ -3,6 +3,8 @@
 .env.local                     # 本地覆盖
 .env.*.local                   # 环境特定的本地文件
 .env.production               # 生产配置（敏感）
+.env.production.backup*       # 生产配置备份（敏感）
+.env.production.tmp            # 配置生成临时文件
 *.pem                         # 证书文件
 *.key                         # 私钥文件
 *.crt                         # 证书文件
@@ -96,3 +98,8 @@ desktop.ini
 *.bak
 *.backup
 *.old
+
+# 生产环境文件（不要使用行内注释，避免 Git 将注释当作匹配内容）
+.env.production
+.env.production.backup*
+.env.production.tmp

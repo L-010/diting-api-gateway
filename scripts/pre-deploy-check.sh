@@ -25,17 +25,17 @@ echo_info() { echo -e "${BLUE}ℹ $*${NC}"; }
 
 check_pass() {
   echo_success "$1"
-  ((CHECKS_PASSED++))
+  CHECKS_PASSED=$((CHECKS_PASSED + 1))
 }
 
 check_fail() {
   echo_error "$1"
-  ((CHECKS_FAILED++))
+  CHECKS_FAILED=$((CHECKS_FAILED + 1))
 }
 
 check_warn() {
   echo_warn "$1"
-  ((CHECKS_WARNING++))
+  CHECKS_WARNING=$((CHECKS_WARNING + 1))
 }
 
 echo_info "=========================================="
@@ -58,7 +58,7 @@ else
   fi
 
   # 检查关键变量
-  local vars=("APP_ENV" "APP_SECRET_KEY" "APP_ENCRYPTION_KEY" "API_KEY_PEPPER" "DATABASE_URL" "FRONTEND_ORIGIN" "PUBLIC_GATEWAY_BASE_URL" "SERVER_NAME" "EXPECTED_ALEMBIC_HEAD")
+  vars=("APP_ENV" "APP_SECRET_KEY" "APP_ENCRYPTION_KEY" "API_KEY_PEPPER" "DATABASE_URL" "FRONTEND_ORIGIN" "PUBLIC_GATEWAY_BASE_URL" "EXPECTED_ALEMBIC_HEAD" "SECURE_COOKIES")
   for var in "${vars[@]}"; do
     if grep -q "^${var}=" .env.production; then
       check_pass "✓ 变量 $var 已配置"
@@ -94,13 +94,9 @@ else
   check_fail "Docker 未安装或不在PATH中"
 fi
 
-if command -v docker-compose &> /dev/null || docker compose version &> /dev/null 2>&1; then
+if docker compose version &> /dev/null 2>&1; then
   check_pass "✓ Docker Compose 已安装"
-  if command -v docker-compose &> /dev/null; then
-    DC_VERSION=$(docker-compose --version | cut -d' ' -f3)
-  else
-    DC_VERSION=$(docker compose version --short 2>/dev/null || echo "2.x+")
-  fi
+  DC_VERSION=$(docker compose version --short 2>/dev/null || echo "2.x+")
   echo_info "  版本: $DC_VERSION"
 else
   check_fail "Docker Compose 未安装"
@@ -110,7 +106,7 @@ echo ""
 
 # 3. 配置文件检查
 echo_info "【3】项目文件检查"
-local required_files=("docker-compose.prod.yml" "backend/Dockerfile" "frontend/Dockerfile" "scripts/deploy-prod.sh" "scripts/migrate.py" "alembic.ini")
+required_files=("docker-compose.prod.yml" "backend/Dockerfile" "frontend/Dockerfile" "scripts/deploy-prod.sh" "scripts/migrate.py" "alembic.ini")
 for file in "${required_files[@]}"; do
   if [[ -f "$file" ]]; then
     check_pass "✓ $file 存在"
@@ -136,19 +132,28 @@ else
   check_fail "EXPECTED_ALEMBIC_HEAD 必须为 a6b7c8d9e0f1"
 fi
 
+secure_cookies=$(grep '^SECURE_COOKIES=' .env.production | cut -d'=' -f2- || true)
+if [[ "$secure_cookies" == "false" ]]; then
+  check_pass "✓ HTTP 模式 Cookie 配置正确"
+elif [[ "$secure_cookies" == "true" ]]; then
+  check_warn "SECURE_COOKIES=true：仅适用于已配置 HTTPS 的环境"
+else
+  check_fail "SECURE_COOKIES 必须为 true 或 false"
+fi
+
 echo ""
 
 # 5. TLS证书检查
 echo_info "【5】TLS 证书检查"
-local cert_file=$(grep "^TLS_CERT_FILE=" .env.production | cut -d'=' -f2)
-local key_file=$(grep "^TLS_KEY_FILE=" .env.production | cut -d'=' -f2)
+cert_file=$(grep "^TLS_CERT_FILE=" .env.production | cut -d'=' -f2- || true)
+key_file=$(grep "^TLS_KEY_FILE=" .env.production | cut -d'=' -f2- || true)
 
 if [[ -z "$cert_file" ]]; then
   check_warn "未配置 TLS_CERT_FILE"
 elif [[ -r "$cert_file" ]]; then
   check_pass "✓ 证书文件可读: $cert_file"
 else
-  check_warn "证书文件不可读或不存在: $cert_file（如果在Ubuntu上会自动下载到容器中）"
+  check_warn "证书文件不可读或不存在: $cert_file（当前 HTTP 模式可跳过）"
 fi
 
 if [[ -z "$key_file" ]]; then
@@ -156,14 +161,14 @@ if [[ -z "$key_file" ]]; then
 elif [[ -r "$key_file" ]]; then
   check_pass "✓ 私钥文件可读: $key_file"
 else
-  check_warn "私钥文件不可读或不存在: $key_file（如果在Ubuntu上会自动下载到容器中）"
+  check_warn "私钥文件不可读或不存在: $key_file（当前 HTTP 模式可跳过）"
 fi
 
 echo ""
 
 # 6. bash脚本兼容性检查
 echo_info "【6】脚本兼容性检查"
-local bash_scripts=("scripts/deploy-prod.sh" "scripts/backup-mysql.sh" "scripts/migrate-prod.sh" "scripts/init-admin.sh" "scripts/gen-env-production.sh")
+bash_scripts=("scripts/deploy-prod.sh" "scripts/backup-mysql.sh" "scripts/migrate-prod.sh" "scripts/init-admin.sh" "scripts/gen-env-production.sh")
 for script in "${bash_scripts[@]}"; do
   if [[ -f "$script" ]]; then
     if bash -n "$script" 2>/dev/null; then
@@ -191,7 +196,7 @@ echo_info "【8】Python 依赖检查"
 if [[ -f backend/requirements.txt ]]; then
   check_pass "✓ requirements.txt 存在"
   # 检查关键依赖
-  local key_deps=("fastapi" "sqlalchemy" "pymysql" "alembic" "pydantic" "cryptography")
+  key_deps=("fastapi" "sqlalchemy" "PyMySQL" "alembic" "pydantic" "cryptography")
   for dep in "${key_deps[@]}"; do
     if grep -q "^$dep" backend/requirements.txt; then
       check_pass "  ✓ $dep"
@@ -234,7 +239,7 @@ echo ""
 echo_info "【11】系统资源检查"
 # 检查是否在Linux上
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  local available_space=$(df /Data 2>/dev/null | tail -1 | awk '{print $4}')
+  available_space=$(df /Data 2>/dev/null | tail -1 | awk '{print $4}' || true)
   if [[ -n "$available_space" && $available_space -gt 52428800 ]]; then  # > 50GB
     check_pass "✓ /Data 分区可用空间充足 ($(( available_space / 1048576 ))GB)"
   else

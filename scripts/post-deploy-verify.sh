@@ -69,13 +69,13 @@ echo ""
 
 # 1. 容器状态检查
 echo_info "【1】容器状态检查"
-if $DC --env-file .env.production -f docker-compose.prod.yml ps | grep -q "Up"; then
+if [[ -n "$($DC --env-file .env.production -f docker-compose.prod.yml ps --status running -q)" ]]; then
   test_pass "Docker容器正在运行"
 
   # 检查每个容器
   containers=("mysql" "backend" "frontend" "email-worker" "file-worker")
   for container in "${containers[@]}"; do
-    if $DC --env-file .env.production -f docker-compose.prod.yml ps "$container" | grep -q "Up"; then
+    if [[ -n "$($DC --env-file .env.production -f docker-compose.prod.yml ps --status running -q "$container")" ]]; then
       test_pass "  $container 容器运行正常"
     else
       test_fail "  $container 容器未运行"

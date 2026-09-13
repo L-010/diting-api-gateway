@@ -99,9 +99,9 @@ fi
 echo_info "准备创建管理员账户..."
 echo_info "用户名: $USERNAME"
 
-# 检查docker-compose是否可用
-if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
-  echo_error "未找到 docker 或 docker-compose 命令"
+# 检查 Docker Compose v2 是否可用
+if ! command -v docker &> /dev/null || ! docker compose version &> /dev/null 2>&1; then
+  echo_error "未找到可用的 Docker Compose v2 命令"
   exit 1
 fi
 

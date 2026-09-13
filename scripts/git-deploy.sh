@@ -6,8 +6,8 @@
 set -euo pipefail
 
 # ==================== 配置 ====================
-PROJECT_DIR="/Data/earthquake-api-gateway/project"
-LOG_FILE="/var/log/api-gateway-deploy.log"
+PROJECT_DIR="${PROJECT_DIR:-/Data/earthquake-api-gateway/project}"
+LOG_FILE="${DEPLOY_LOG_FILE:-/tmp/api-gateway-deploy.log}"
 BACKUP_DIR="/Data/earthquake-api-gateway/backups"
 SLACK_WEBHOOK="${SLACK_WEBHOOK_URL:-}"
 GITHUB_REPO="${GITHUB_REPO:-origin}"
@@ -113,9 +113,9 @@ check_prerequisites() {
     return 1
   fi
 
-  # 检查docker-compose
-  if ! command -v docker-compose &> /dev/null; then
-    log ERROR "docker-compose 命令未找到"
+  # 检查 Docker Compose v2
+  if ! docker compose version &> /dev/null 2>&1; then
+    log ERROR "Docker Compose v2 命令未找到"
     return 1
   fi
 
@@ -148,9 +148,17 @@ fetch_and_checkout() {
   fi
 
   # 切换到最新代码
-  log INFO "切换到 $GITHUB_REPO/$DEPLOY_BRANCH..."
-  git checkout "$GITHUB_REPO/$DEPLOY_BRANCH" || {
+  log INFO "切换到本地 $DEPLOY_BRANCH 分支..."
+  if git show-ref --verify --quiet "refs/heads/$DEPLOY_BRANCH"; then
+    git checkout "$DEPLOY_BRANCH"
+  else
+    git checkout -b "$DEPLOY_BRANCH" "$GITHUB_REPO/$DEPLOY_BRANCH"
+  fi || {
     log ERROR "Git checkout 失败"
+    return 1
+  }
+  git pull --ff-only "$GITHUB_REPO" "$DEPLOY_BRANCH" || {
+    log ERROR "Git pull 失败"
     return 1
   }
 
@@ -235,8 +243,8 @@ verify_deployment() {
     log SUCCESS "部署验证通过"
     return 0
   else
-    log WARNING "部署验证有问题"
-    return 0
+    log ERROR "部署验证失败"
+    return 1
   fi
 }
 
@@ -290,9 +298,9 @@ main() {
 
   # 验证部署
   if ! verify_deployment; then
-    log WARNING "部署验证发现问题"
-    notify_slack "⚠️  部署完成但有警告" warning
-    exit 0
+    log ERROR "部署验证发现问题"
+    notify_slack "❌ 部署完成但验证失败" error
+    exit 1
   fi
 
   log INFO "╔════════════════════════════════════════╗"

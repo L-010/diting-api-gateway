@@ -12,6 +12,7 @@
 docker --version
 docker compose version
 git --version
+python3 --version
 openssl version
 curl --version
 ```
@@ -24,42 +25,37 @@ sudo usermod -aG docker "$USER"
 
 ## 2. 拉取代码
 
-代码统一放在 `/Data/earthquake-api-gateway/project`，数据库、品牌资源和备份放在其父目录。下面的命令可以重复执行；已有项目目录时会更新到远程 `main`，并保留已有的 `.env.production`。
+代码统一放在 `/Data/earthquake-api-gateway/project`，数据库、品牌资源和备份放在其父目录。首次部署直接克隆；已有旧项目目录时会先保留为带时间戳的备份目录，再重新克隆最新 `main` 并保留已有的 `.env.production`。
 
 ```bash
 sudo mkdir -p /Data/earthquake-api-gateway/mysql
 sudo mkdir -p /Data/earthquake-api-gateway/brand-assets
 sudo mkdir -p /Data/earthquake-api-gateway/backups/mysql
-sudo chown -R "$USER":"$USER" /Data/earthquake-api-gateway
+sudo chown "$USER":"$USER" /Data/earthquake-api-gateway
 
 cd /Data/earthquake-api-gateway
 if [ -d project/.git ]; then
-  cd project
   ENV_BACKUP=""
-  if [ -f .env.production ]; then
+  if [ -f project/.env.production ]; then
     ENV_BACKUP="$(mktemp /tmp/earthquake-api-gateway-env.XXXXXX)"
-    cp -p .env.production "$ENV_BACKUP"
+    cp -p project/.env.production "$ENV_BACKUP"
   fi
-  git fetch origin main
-  dirty_code="$(git status --porcelain --untracked-files=no | awk 'substr($0, 4) != ".env.production" {print}')"
-  if [ -n "$dirty_code" ]; then
-    if [ -n "$ENV_BACKUP" ]; then rm -f "$ENV_BACKUP"; fi
-    echo "项目目录有未提交的代码修改，请先备份并清理后再更新。"
+  DEPLOY_STAMP="$(date +%Y%m%d%H%M%S)"
+  NEW_PROJECT="project.new.$DEPLOY_STAMP"
+  OLD_PROJECT="project.backup.$DEPLOY_STAMP"
+  if [ -e "$NEW_PROJECT" ] || [ -e "$OLD_PROJECT" ]; then
+    echo "检测到同名临时目录，请先清理后再更新。"
     exit 1
   fi
-  set -- $(git rev-list --left-right --count HEAD...origin/main)
-  if [ "$1" -gt 0 ]; then
-    if [ -n "$ENV_BACKUP" ]; then rm -f "$ENV_BACKUP"; fi
-    echo "项目目录包含本地提交，未自动覆盖；请先备份后重新克隆。"
-    exit 1
-  fi
-  if [ -n "$ENV_BACKUP" ]; then rm -f .env.production; fi
-  git checkout -B main origin/main
+  git clone https://github.com/L-010/diting-api-gateway.git "$NEW_PROJECT"
+  mv project "$OLD_PROJECT"
+  mv "$NEW_PROJECT" project
   if [ -n "$ENV_BACKUP" ]; then
-    cp "$ENV_BACKUP" .env.production
-    chmod 600 .env.production
+    cp "$ENV_BACKUP" project/.env.production
+    chmod 600 project/.env.production
     rm -f "$ENV_BACKUP"
   fi
+  cd project
 else
   git clone https://github.com/L-010/diting-api-gateway.git project
   cd project

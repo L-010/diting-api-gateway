@@ -13,6 +13,7 @@ require_command() { command -v "$1" >/dev/null || { echo "缺少命令: $1" >&2;
 require_command docker
 require_command curl
 docker compose version >/dev/null
+command -v python3 >/dev/null || { echo "缺少命令: python3" >&2; exit 1; }
 
 if [[ "$ACTION" == status ]]; then "${COMPOSE[@]}" ps; exit 0; fi
 if [[ "$ACTION" == stop ]]; then "${COMPOSE[@]}" stop; exit 0; fi
@@ -84,7 +85,7 @@ else
   exit 1
 fi
 "${COMPOSE[@]}" config >/dev/null
-if [[ "$BUILD" == 1 ]]; then "${COMPOSE[@]}" build --pull; else "${COMPOSE[@]}" build; fi
+if [[ "$BUILD" == 1 ]]; then "${COMPOSE[@]}" build; else "${COMPOSE[@]}" build; fi
 "${COMPOSE[@]}" up -d mysql
 "${COMPOSE[@]}" run --rm backend python scripts/migrate.py
 "${COMPOSE[@]}" up -d backend frontend email-worker file-worker

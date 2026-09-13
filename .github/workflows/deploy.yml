@@ -38,7 +38,11 @@ jobs:
     - name: Check for secrets in code
       run: |
         echo "🔒 Scanning for potential secrets..."
-        if grep -r "password" --include="*.py" --include="*.js" --include="*.ts" | grep -v ".example" | grep -v "PASSWORD"; then
+        if grep -r "password" --include="*.py" --include="*.js" --include="*.ts" \
+          --exclude-dir=".venv" \
+          --exclude-dir="node_modules" \
+          --exclude-dir=".git" \
+          | grep -v ".example" | grep -v "PASSWORD"; then
           echo "⚠️ Possible hardcoded passwords found"
           exit 1
         fi

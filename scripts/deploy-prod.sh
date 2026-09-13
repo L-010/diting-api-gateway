@@ -32,7 +32,7 @@ tls_key_file="$(production_env_value TLS_KEY_FILE || true)"
 mysql_data_dir="$(production_env_value MYSQL_DATA_DIR || true)"
 brand_asset_dir_host="$(production_env_value BRAND_ASSET_DIR_HOST || true)"
 backup_dir="$(production_env_value BACKUP_DIR || true)"
-[[ "$expected_head" == "a6b7c8d9e0f1" ]] || { echo "EXPECTED_ALEMBIC_HEAD 必须为 a6b7c8d9e0f1" >&2; exit 1; }
+[[ "$expected_head" == "f9a0b1c2d3e4" ]] || { echo "EXPECTED_ALEMBIC_HEAD 必须为 f9a0b1c2d3e4" >&2; exit 1; }
 [[ -n "$frontend_origin" && -n "$public_gateway_base_url" ]] || { echo "必须配置正式域名" >&2; exit 1; }
 [[ -r "$tls_cert_file" && -r "$tls_key_file" ]] || { echo "TLS 证书或私钥不可读" >&2; exit 1; }
 mysql_data_dir="${mysql_data_dir:-/Data/earthquake-api-gateway/mysql}"

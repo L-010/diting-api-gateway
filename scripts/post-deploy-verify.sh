@@ -393,17 +393,16 @@ if [[ $TESTS_FAILED -eq 0 ]]; then
   echo_success "✓ 部署验证通过！"
   echo_success ""
   echo_success "接下来的步骤:"
-  echo_success "  1. 初始化管理员账户: ./scripts/init-admin.sh"
-  echo_success "  2. 配置Nginx反代: sudo ./scripts/configure-nginx.sh"
-  echo_success "  3. 登录管理后台: https://api.example.com"
-  echo_success "  4. 设置自动备份: sudo crontab -e (参考文档)"
+  echo_success "  1. 初始化管理员账户: bash scripts/init-admin.sh"
+  echo_success "  2. 当前 HTTP 模式访问: http://服务器地址:3000"
+  echo_success "  3. 设置自动备份: 参考 SERVER_DEPLOY_COMMANDS.md"
   echo ""
   exit 0
 else
   echo_error "✗ 存在 $TESTS_FAILED 个验证失败"
   echo_error ""
   echo_error "请查看上面的错误信息并进行排查"
-  echo_error "参考故障排查文档: docs/UBUNTU_DEPLOYMENT.md"
+  echo_error "参考故障排查文档: SERVER_DEPLOY_COMMANDS.md"
   echo ""
   exit 1
 fi

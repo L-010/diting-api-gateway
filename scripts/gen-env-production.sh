@@ -13,7 +13,6 @@ die() {
 
 command -v openssl >/dev/null 2>&1 || die "缺少 openssl，请先安装。"
 command -v python3 >/dev/null 2>&1 || die "缺少 python3，请先安装。"
-python3 -c 'from cryptography.fernet import Fernet' >/dev/null 2>&1 || die "python3 缺少 cryptography，请先安装后再生成配置。"
 
 if [[ -f .env.production ]]; then
   read -r -p ".env.production 已存在，是否覆盖？(y/N): " answer
@@ -25,7 +24,7 @@ random_secret() {
 }
 
 random_fernet() {
-  python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode(), end="")'
+  python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode(), end="")'
 }
 
 random_hex() {
@@ -74,11 +73,13 @@ validate_upstream_allowed "$TOMODD_BASE_URL" "$ALLOWED_UPSTREAM_HOSTS" || die "�
 read -r -s -p "TomoDD 上游 Token（没有可留空）: " TOMODD_UPSTREAM_TOKEN
 echo
 
-read -r -p "数据库用户密码（留空自动生成，仅允许字母和数字）: " MYSQL_PASSWORD
+read -r -s -p "数据库用户密码（留空自动生成，仅允许字母和数字）: " MYSQL_PASSWORD
+echo
 MYSQL_PASSWORD="${MYSQL_PASSWORD:-$(random_hex)}"
 [[ "$MYSQL_PASSWORD" =~ ^[A-Za-z0-9]+$ ]] || die "数据库用户密码只能包含字母和数字，以避免 URL 编码错误。"
 
-read -r -p "MySQL root 密码（留空自动生成，仅允许字母和数字）: " MYSQL_ROOT_PASSWORD
+read -r -s -p "MySQL root 密码（留空自动生成，仅允许字母和数字）: " MYSQL_ROOT_PASSWORD
+echo
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-$(random_hex)}"
 [[ "$MYSQL_ROOT_PASSWORD" =~ ^[A-Za-z0-9]+$ ]] || die "MySQL root 密码只能包含字母和数字。"
 [[ "$MYSQL_PASSWORD" != "$MYSQL_ROOT_PASSWORD" ]] || die "数据库用户密码和 root 密码必须不同。"

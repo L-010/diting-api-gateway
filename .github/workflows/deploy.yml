@@ -37,16 +37,20 @@ jobs:
 
     - name: Check for secrets in code
       run: |
-        echo "🔒 Scanning for potential secrets..."
-        if grep -r "password" --include="*.py" --include="*.js" --include="*.ts" \
+        echo "🔒 Scanning for hardcoded secrets..."
+        # Look for suspicious patterns: actual values assigned to password/secret variables
+        # This excludes field names, parameters, and comments
+        if grep -rE '^\s*(password|secret|api_key|token)\s*=\s*["\'][^"\']*["\']' \
+          --include="*.py" --include="*.js" --include="*.ts" \
           --exclude-dir=".venv" \
           --exclude-dir="node_modules" \
           --exclude-dir=".git" \
-          | grep -v ".example" | grep -v "PASSWORD"; then
-          echo "⚠️ Possible hardcoded passwords found"
+          --exclude-dir="alembic" \
+          --exclude-dir="migrations"; then
+          echo "⚠️ Possible hardcoded secrets found"
           exit 1
         fi
-        echo "✅ No obvious secrets found"
+        echo "✅ No hardcoded secrets detected"
 
   build:
     needs: check

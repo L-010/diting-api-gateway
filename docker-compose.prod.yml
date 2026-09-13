@@ -1,0 +1,122 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-storage-engine=InnoDB
+      - --skip-name-resolve
+    volumes:
+      - ${MYSQL_DATA_DIR:-/Data/api-mvp/mysql}:/var/lib/mysql
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: api-gateway-backend:local
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PYTHONPATH: /app/backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ${BRAND_ASSET_DIR_HOST:-/Data/api-mvp/brand-assets}:/app/data/brand-assets
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/livez', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging: *default-logging
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    image: api-gateway-frontend:local
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: http://backend:8000
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:${FRONTEND_PORT:-3000}:3000"
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging: *default-logging
+
+  email-worker:
+    image: api-gateway-backend:local
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PYTHONPATH: /app/backend
+    command: ["python", "-m", "app.email_worker", "--interval", "5"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import app.email_worker; print('ok')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+
+  file-worker:
+    image: api-gateway-backend:local
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PYTHONPATH: /app/backend
+    command: ["python", "-m", "app.file_worker"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import app.file_worker; print('ok')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
+
+networks:
+  internal:
+    driver: bridge

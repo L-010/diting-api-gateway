@@ -1,0 +1,4 @@
+username,password,display_name,email
+zhangsan,P@ssw0rd123,张三,zhangsan@example.com
+lisi,SecurePass456!,李四,lisi@example.com
+wangwu,MyPassword789#,王五,wangwu@example.com

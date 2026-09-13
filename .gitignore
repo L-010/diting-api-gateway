@@ -1,0 +1,98 @@
+# === 环境变量和密钥 ===
+.env                           # 本地环境变量
+.env.local                     # 本地覆盖
+.env.*.local                   # 环境特定的本地文件
+.env.production               # 生产配置（敏感）
+*.pem                         # 证书文件
+*.key                         # 私钥文件
+*.crt                         # 证书文件
+secrets/                      # 密钥目录
+
+# === Python ===
+.venv/
+venv/
+ENV/
+env/
+backend/.pytest_cache/
+backend/__pycache__/
+backend/**/*.pyc
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# === Node/Frontend ===
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/tsconfig.tsbuildinfo
+frontend/playwright-report/
+frontend/test-results/
+.playwright-cli/
+output/playwright/
+
+# === 测试和日志 ===
+TEST_REPORT.local.json
+TEST_REPORT.md
+*.log
+logs/
+tmp/
+temp/
+
+# === 数据库和数据 ===
+data/
+*.db
+*.sqlite
+*.sqlite3
+/Data/
+database.db
+
+# === Docker ===
+.docker/
+docker-compose.override.yml
+
+# === IDE和编辑器 ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# === 临时文件 ===
+.tmp*
+.temp*
+.cache/
+.pytest_cache/
+.tox/
+.coverage
+.nyc_output/
+
+# === 构建产物 ===
+dist/
+build/
+*.tar.gz
+*.zip
+
+# === 系统文件 ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === CI/CD临时文件 ===
+.github/workflows/*.log
+.gitlab-ci.log
+
+# === 备份文件 ===
+*.bak
+*.backup
+*.old

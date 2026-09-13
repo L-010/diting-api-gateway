@@ -1,0 +1,23 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { PortalShell } from "@/components/portal-shell";
+import { RemoteFileTable } from "@/components/remote-file-table";
+import { api, errorMessage } from "@/lib/api";
+import { RemoteFile } from "@/lib/remote-files";
+
+type Task = { id:string; tool_slug:string; tool_name:string; upstream_id:string; status:string; created_at:string; updated_at:string; metadata:Record<string,unknown>; capabilities:Record<string,boolean>; is_terminal:boolean; upstream?:Record<string,unknown>|null };
+
+export default function TaskDetailPage() {
+  const taskId=useParams<{taskId:string}>().taskId; const [task,setTask]=useState<Task|null>(null); const [tab,setTab]=useState("overview"); const [payload,setPayload]=useState<unknown>(null); const [files,setFiles]=useState<RemoteFile[]>([]); const [error,setError]=useState(""); const [loading,setLoading]=useState(false);
+  const loadTask=useCallback(async()=>{setError("");try{setTask(await api<Task>(`/api/me/tasks/${encodeURIComponent(taskId)}`));}catch(cause){setError(errorMessage(cause));}},[taskId]);
+  const loadFiles=useCallback(async()=>{setLoading(true);setError("");try{setFiles(await api<RemoteFile[]>(`/api/me/tasks/${encodeURIComponent(taskId)}/files`));}catch(cause){setError(errorMessage(cause));}finally{setLoading(false);}},[taskId]);
+  useEffect(()=>{const initial=new URLSearchParams(window.location.search).get("tab");if(["overview","logs","manifest","files"].includes(initial||""))setTab(initial as string);void loadTask();if(initial==="files")void loadFiles();},[loadFiles,loadTask]);
+  useEffect(()=>{if(!task||task.is_terminal)return;const timer=window.setInterval(()=>{if(document.visibilityState==="visible"){void loadTask();if(tab==="files")void loadFiles();}},10_000);return()=>window.clearInterval(timer);},[task?.is_terminal,tab,loadFiles,loadTask]);
+  async function openTab(next:string){setTab(next);setPayload(null);window.history.replaceState(null,"",`/tasks/${encodeURIComponent(taskId)}?tab=${next}`);if(next==="overview")return;if(next==="files"){await loadFiles();return;}setLoading(true);setError("");try{setPayload(await api(`/api/me/tasks/${encodeURIComponent(taskId)}/${next}`));}catch(cause){setError(errorMessage(cause));}finally{setLoading(false);}}
+  const tabs=([ ["overview","概览",true],["logs","日志",Boolean(task?.capabilities.logs)],["manifest","Manifest",Boolean(task?.capabilities.manifest)],["files","文件与制品",true] ] as Array<[string,string,boolean]>).filter(([, ,enabled])=>enabled);
+  return <PortalShell title="任务详情"><div className="toolbar"><Link className="button secondary compact" href="/tasks"><ArrowLeft size={15}/>返回任务中心</Link><button className="icon-button" title="刷新任务" aria-label="刷新任务" onClick={()=>void loadTask()}><RefreshCw size={16}/></button></div>{error&&<div className="state-box error"><p>{error}</p><button className="button secondary compact" onClick={()=>tab==="files"?void loadFiles():void loadTask()}>重试</button></div>}{!task&&!error&&<div className="state-box">正在加载任务...</div>}{task&&<><section className="panel task-summary"><div><span className="tag">{task.tool_slug}</span><h2>{task.tool_name}</h2><code>{task.id}</code></div><dl><div><dt>状态</dt><dd><span className="status info">{task.status}</span></dd></div><div><dt>上游任务 ID</dt><dd><code>{task.upstream_id}</code></dd></div><div><dt>更新时间</dt><dd>{new Date(task.updated_at).toLocaleString()}</dd></div></dl></section><div className="profile-tabs" role="tablist">{tabs.map(([value,label])=><button role="tab" aria-selected={tab===value} className={tab===value?"active":""} key={value} onClick={()=>void openTab(value)}>{label}</button>)}</div><section className="panel task-payload">{tab==="overview"?<dl className="profile-facts"><div><dt>平台任务 ID</dt><dd><code>{task.id}</code></dd></div><div><dt>工具</dt><dd>{task.tool_name}</dd></div><div><dt>创建时间</dt><dd>{new Date(task.created_at).toLocaleString()}</dd></div><div><dt>可用能力</dt><dd>{Object.entries(task.capabilities).filter(([,enabled])=>enabled).map(([name])=>name).join(" / ")||"仅状态记录"}</dd></div></dl>:tab==="files"?(loading?<div className="state-box">正在同步文件视图...</div>:<><RemoteFileTable files={files} onChanged={()=>void loadFiles()}/>{!files.length&&task.capabilities.download&&<div className="settings-boundary-note"><strong>整包制品尚未就绪</strong><p>平台正在后台登记整包文件。文件就绪后会显示在本表，并统一经过下载授权、并发限制和审计记录。</p></div>}</>):loading?<div className="state-box">正在加载...</div>:<pre className="code-block">{JSON.stringify(payload,null,2)}</pre>}</section></>}</PortalShell>;
+}

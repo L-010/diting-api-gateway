@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>地震学 API 软件管理与共享平台 Mermaid 流程图</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --paper: #ffffff;
+      --text: #111827;
+      --muted: #64748b;
+      --line: #d9e2ef;
+      --brand: #1555a8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 18px 40px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.3;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .toolbar a,
+    .toolbar button {
+      height: 34px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--brand);
+      font: 600 13px "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .toolbar button.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    main {
+      width: 100vw;
+      margin: 0;
+    }
+
+    section {
+      width: 100vw;
+      height: calc(100vh - 118px);
+      min-height: 620px;
+      margin: 0;
+      padding: 18px 28px 24px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      color: var(--brand);
+    }
+
+    .note {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .mermaid {
+      width: 100%;
+      min-width: 0;
+      flex: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .mermaid svg {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    footer {
+      padding: 14px 48px 20px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    section:fullscreen {
+      height: 100vh;
+      min-height: 100vh;
+      padding: 20px 28px;
+      background: var(--paper);
+    }
+
+    section:fullscreen h2 {
+      font-size: 24px;
+    }
+
+    section:fullscreen .note {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>地震学 API 软件管理与共享平台 Mermaid 流程图</h1>
+    <p class="subtitle">包含“用户体系架构图”和“系统交互逻辑图”，可直接在浏览器中查看。</p>
+    <div class="toolbar">
+      <a href="#diagram-1">查看图 1</a>
+      <a href="#diagram-2">查看图 2</a>
+      <button class="primary" type="button" data-fullscreen="diagram-1">全屏查看图 1</button>
+      <button class="primary" type="button" data-fullscreen="diagram-2">全屏查看图 2</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="diagram-1">
+      <h2>1. 整个平台的用户体系架构图</h2>
+      <p class="note">展示访客、注册用户、科研用户、管理员、平台运维管理员、API Key 生命周期和权限边界。</p>
+      <pre class="mermaid">
+flowchart TB
+    subgraph Public["公开访问"]
+        Visitor["未登录访客"]
+        PublicHome["公开门户首页"]
+        PublicApiIntro["API 公开介绍"]
+        PublicCatalog["公开 API 能力概览"]
+    end
+
+    subgraph RegisterAuth["注册与认证"]
+        Register["新用户注册"]
+        Review["管理员审核或自动开通"]
+        Login["登录认证"]
+        UserAccount["用户账号"]
+        RoleAssign["角色与权限分配"]
+    end
+
+    subgraph UserRole["登录后用户能力"]
+        NormalUser["注册用户"]
+        ResearchUser["科研用户"]
+        BrowseCatalog["浏览 API 目录"]
+        ViewIntro["查看 API 介绍"]
+        ViewDocs["查看接口文档"]
+        OnlineDebug["在线调试"]
+        OwnCalls["查看自己的调用记录"]
+        OwnTasks["查看自己的任务与结果"]
+        DownloadOwn["下载自己的结果文件"]
+    end
+
+    subgraph ResearchPower["科研高级能力"]
+        AdvancedParams["使用高级参数"]
+        UploadInp["上传 .inp 控制文件"]
+        FullLogs["查看完整 stdout 和 stderr"]
+        MiddleFiles["下载完整中间文件"]
+        LongJobs["运行长耗时任务"]
+        Inversion["主反演"]
+        LCurve["L 曲线"]
+        Checkerboard["棋盘测试"]
+    end
+
+    subgraph ApiKeyPower["API Key 权限"]
+        KeyApply["API Key 申请"]
+        KeyReview["审核启用禁用过期"]
+        KeyOwner["所属用户"]
+        KeyScope["绑定可调用 API 范围"]
+        KeyQuota["绑定调用配额"]
+        KeyExpire["绑定过期时间"]
+        KeyLog["记录调用日志"]
+        KeyRotate["可禁用或轮换"]
+    end
+
+    subgraph AdminPower["管理员后台能力"]
+        Admin["管理员"]
+        RouteConfig["Gateway 路由配置"]
+        ApiMapping["API 映射配置"]
+        PublishManage["API 发布管理"]
+        UserPermission["用户与权限管理"]
+        KeyManage["API Key 管理"]
+        LogStats["调用日志统计"]
+        SystemSetting["系统设置"]
+    end
+
+    subgraph OpsPower["运维管理能力"]
+        OpsAdmin["平台运维管理员"]
+        HealthCheck["服务健康检查"]
+        ResourceQuota["资源配额配置"]
+        LogRetention["日志保留策略"]
+        DataClean["数据清理策略"]
+        BackendMonitor["后端 API 服务状态监控"]
+    end
+
+    subgraph Boundary["权限边界"]
+        Gateway["API Gateway 统一入口"]
+        HiddenBackend["真实后端 API 地址不向普通用户暴露"]
+        Audit["统一日志与审计"]
+    end
+
+    Visitor --> PublicHome
+    PublicHome --> PublicApiIntro
+    PublicHome --> PublicCatalog
+    PublicHome --> Register
+    PublicHome --> Login
+
+    Register --> Review
+    Review --> UserAccount
+    UserAccount --> Login
+    Login --> RoleAssign
+    RoleAssign --> NormalUser
+    RoleAssign --> ResearchUser
+    RoleAssign --> Admin
+    RoleAssign --> OpsAdmin
+
+    NormalUser --> BrowseCatalog
+    NormalUser --> ViewIntro
+    NormalUser --> ViewDocs
+    NormalUser --> OnlineDebug
+    NormalUser --> OwnCalls
+    NormalUser --> OwnTasks
+    NormalUser --> DownloadOwn
+
+    ResearchUser --> NormalUser
+    ResearchUser --> AdvancedParams
+    ResearchUser --> UploadInp
+    ResearchUser --> FullLogs
+    ResearchUser --> MiddleFiles
+    ResearchUser --> LongJobs
+    LongJobs --> Inversion
+    LongJobs --> LCurve
+    LongJobs --> Checkerboard
+
+    NormalUser --> KeyApply
+    ResearchUser --> KeyApply
+    KeyApply --> KeyReview
+    KeyReview --> KeyOwner
+    KeyReview --> KeyScope
+    KeyReview --> KeyQuota
+    KeyReview --> KeyExpire
+    KeyReview --> KeyLog
+    KeyReview --> KeyRotate
+
+    Admin --> RouteConfig
+    Admin --> ApiMapping
+    Admin --> PublishManage
+    Admin --> UserPermission
+    Admin --> KeyManage
+    Admin --> LogStats
+    Admin --> SystemSetting
+
+    OpsAdmin --> HealthCheck
+    OpsAdmin --> ResourceQuota
+    OpsAdmin --> LogRetention
+    OpsAdmin --> DataClean
+    OpsAdmin --> BackendMonitor
+
+    OnlineDebug --> Gateway
+    KeyReview --> Gateway
+    RouteConfig --> Gateway
+    ApiMapping --> Gateway
+    Gateway --> HiddenBackend
+    Gateway --> Audit
+    LogStats --> Audit
+    BackendMonitor --> HiddenBackend
+      </pre>
+    </section>
+
+    <section id="diagram-2">
+      <h2>2. 整个系统的交互逻辑图</h2>
+      <p class="note">展示公开访问、注册用户调用 API、API Gateway 转发、tomoDD-SP 后端执行、管理员配置与日志审计。</p>
+      <pre class="mermaid">
+flowchart TB
+    Start["访问网站公开门户首页"]
+
+    subgraph VisitorFlow["未登录用户路径"]
+        BrowsePlatform["浏览平台介绍"]
+        BrowseApiIntro["浏览 API 简介"]
+        ClickCall["点击开始调用"]
+        NeedLogin["跳转登录或注册"]
+    end
+
+    subgraph UserFlow["注册用户路径"]
+        RegisterUser["注册账号"]
+        UserLogin["用户登录"]
+        UserPortal["进入用户调用门户"]
+        Catalog["浏览 API 目录"]
+        ApiDetail["查看 API 详情"]
+        ApiDocs["查看接口文档"]
+        ApiKeyPage["申请或查看 API Key"]
+        Debug["在线调试"]
+        SubmitCall["提交 API 调用"]
+        CallRecord["查看调用记录"]
+        TaskDetail["查看任务详情"]
+        TaskLogs["查看任务日志"]
+        DownloadFiles["下载结果文件"]
+    end
+
+    subgraph GatewayFlow["API Gateway 核心逻辑"]
+        UnifiedEntry["统一入口"]
+        Auth["认证鉴权"]
+        KeyCheck["API Key 校验"]
+        RateLimit["限流与版本控制"]
+        RouteForward["路由转发"]
+        LogWrite["调用日志记录"]
+        ReturnResult["返回结果或错误"]
+        BackendHidden["真实后端地址不暴露"]
+    end
+
+    subgraph TomoddFlow["tomoDD-SP 走时成像 API 示例"]
+        DatasetUpload["数据集上传"]
+        FileCheck["文件校验"]
+        CreateJob["创建任务"]
+        PhaseSelection["震相筛选"]
+        Ph2dt["ph2dt 事件对构建"]
+        SpExtract["S-P 提取"]
+        InversionJob["主反演"]
+        LCurveJob["L 曲线"]
+        CheckerJob["棋盘测试"]
+        Visualization["可视化处理"]
+        JobStatus["任务状态查询"]
+        LogQuery["日志查询"]
+        ArtifactList["artifact 结果清单"]
+        ArtifactDownload["artifact 结果下载"]
+    end
+
+    subgraph AdminFlow["管理员路径"]
+        AdminLogin["管理员登录"]
+        AdminHome["进入管理员后台"]
+        RouteConfig["配置 Gateway 路由"]
+        MappingConfig["配置虚拟 API 到真实 API 的映射"]
+        PublishApi["发布 API"]
+        PermissionConfig["配置用户权限"]
+        KeyManage["管理 API Key"]
+        TestCall["测试调用"]
+        GlobalStats["查看全平台调用日志和统计"]
+    end
+
+    subgraph DataAudit["日志与结果"]
+        JobId["返回 job_id"]
+        ResultFiles["结果文件"]
+        ApiLog["API 请求日志"]
+        WorkerLog["Worker 执行日志"]
+        AuditLog["审计日志"]
+        StatsBoard["统计看板"]
+    end
+
+    Start --> BrowsePlatform
+    BrowsePlatform --> BrowseApiIntro
+    BrowseApiIntro --> ClickCall
+    ClickCall --> NeedLogin
+    NeedLogin --> RegisterUser
+    NeedLogin --> UserLogin
+
+    RegisterUser --> UserLogin
+    UserLogin --> UserPortal
+    UserPortal --> Catalog
+    Catalog --> ApiDetail
+    ApiDetail --> ApiDocs
+    ApiDocs --> ApiKeyPage
+    ApiKeyPage --> Debug
+    Debug --> SubmitCall
+
+    SubmitCall --> UnifiedEntry
+    UnifiedEntry --> Auth
+    Auth --> KeyCheck
+    KeyCheck --> RateLimit
+    RateLimit --> RouteForward
+    RouteForward --> BackendHidden
+    RouteForward --> DatasetUpload
+
+    DatasetUpload --> FileCheck
+    FileCheck --> CreateJob
+    CreateJob --> PhaseSelection
+    PhaseSelection --> Ph2dt
+    Ph2dt --> SpExtract
+    SpExtract --> InversionJob
+    InversionJob --> LCurveJob
+    LCurveJob --> CheckerJob
+    CheckerJob --> Visualization
+    Visualization --> ArtifactList
+
+    CreateJob --> JobId
+    JobId --> ReturnResult
+    ArtifactList --> ArtifactDownload
+    ArtifactDownload --> ResultFiles
+    JobStatus --> TaskDetail
+    LogQuery --> TaskLogs
+
+    ReturnResult --> CallRecord
+    CallRecord --> TaskDetail
+    TaskDetail --> JobStatus
+    TaskDetail --> LogQuery
+    TaskDetail --> ArtifactList
+    TaskDetail --> DownloadFiles
+    DownloadFiles --> ResultFiles
+
+    UnifiedEntry --> LogWrite
+    LogWrite --> ApiLog
+    CreateJob --> WorkerLog
+    ArtifactDownload --> AuditLog
+    ApiLog --> StatsBoard
+    WorkerLog --> StatsBoard
+    AuditLog --> StatsBoard
+
+    Start --> AdminLogin
+    AdminLogin --> AdminHome
+    AdminHome --> RouteConfig
+    AdminHome --> MappingConfig
+    AdminHome --> PublishApi
+    AdminHome --> PermissionConfig
+    AdminHome --> KeyManage
+    AdminHome --> GlobalStats
+    RouteConfig --> UnifiedEntry
+    MappingConfig --> BackendHidden
+    PublishApi --> Catalog
+    PermissionConfig --> Auth
+    KeyManage --> KeyCheck
+    TestCall --> UnifiedEntry
+    AdminHome --> TestCall
+    GlobalStats --> StatsBoard
+      </pre>
+    </section>
+  </main>
+
+  <footer>
+    说明：本页面通过 Mermaid 在浏览器端渲染流程图；如未显示，请确认浏览器可以访问 jsDelivr CDN。
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      securityLevel: "loose",
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: true,
+        curve: "basis"
+      },
+      themeVariables: {
+        fontFamily: "Microsoft YaHei, PingFang SC, Noto Sans CJK SC, Arial, sans-serif",
+        primaryColor: "#eef4ff",
+        primaryTextColor: "#111827",
+        primaryBorderColor: "#1555a8",
+        lineColor: "#64748b",
+        secondaryColor: "#eef8f4",
+        tertiaryColor: "#fff8ea"
+      }
+    });
+
+    document.querySelectorAll("[data-fullscreen]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = document.getElementById(button.dataset.fullscreen);
+        if (target && target.requestFullscreen) {
+          target.requestFullscreen();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

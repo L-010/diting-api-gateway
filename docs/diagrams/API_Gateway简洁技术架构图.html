@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>API Gateway 三层简洁技术架构图</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f5f7fb;
+      color: #142033;
+      font-family: "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+    }
+
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 30px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.35;
+    }
+
+    .summary {
+      margin: 0 0 18px;
+      color: #64748b;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .canvas {
+      background: #ffffff;
+      border: 1px solid #d8e0ea;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      min-width: 1260px;
+      min-height: 720px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>API Gateway 三层简洁技术架构图</h1>
+    <p class="summary">
+      多个用户统一访问平台 API Gateway；中间大块表示平台统一入口与访问控制能力；底层各专业工具部署在独立机器上，并通过各自 API 提供服务。
+    </p>
+
+    <section class="canvas">
+      <pre class="mermaid">
+flowchart TB
+  classDef user fill:#ffffff,stroke:#ffffff,stroke-width:0px,color:#111827;
+  classDef gateway fill:#eaf2ff,stroke:#2f65d9,stroke-width:2.6px,color:#142033;
+  classDef gatewayTitle fill:#dcecff,stroke:#2f65d9,stroke-width:2px,color:#142033;
+  classDef service fill:#f6f2ff,stroke:#6d4bc2,stroke-width:2px,color:#1f2937;
+
+  subgraph U[" "]
+    direction LR
+    U1["用户 1"]:::user
+    U2["用户 2"]:::user
+    U3["用户 3"]:::user
+    UN["用户 N"]:::user
+  end
+
+  subgraph G["API Gateway 统一入口与访问控制层"]
+    direction TB
+    G0["平台统一 IP / API"]:::gatewayTitle
+    G1["Web 网关：HTTPS、登录态、静态页面、接口文档<br/>API 网关：认证鉴权、API Key、调用限额、版本控制、请求审计<br/>转发原则：用户只访问平台地址，真实 API 服务地址不直接公开<br/>结果能力：调用日志、状态查询、结果返回、文件下载"]:::gateway
+  end
+
+  subgraph S["专业 API 服务层"]
+    direction LR
+    S1["噪声成像 API<br/>数据处理、成像反演<br/>可对接 MATLAB 服务"]:::service
+    S2["震源破裂过程 API<br/>震源过程反演与分析<br/>可包含 MATLAB 计算"]:::service
+    S3["走时成像 API<br/>文本数据、反演参数文件<br/>输入模型文件，返回结果文件"]:::service
+    S4["其它专业 API<br/>后续专业模块扩展接入<br/>统一发布、配置和审计"]:::service
+  end
+
+  U1 -->|"统一 API 访问"| G0
+  U2 -->|"统一 API 访问"| G0
+  U3 -->|"统一 API 访问"| G0
+  UN -->|"统一 API 访问"| G0
+
+  G0 --> G1
+
+  G1 -->|"路由转发"| S1
+  G1 -->|"路由转发"| S2
+  G1 -->|"路由转发"| S3
+  G1 -->|"路由转发"| S4
+      </pre>
+    </section>
+  </main>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        fontFamily: "Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif",
+        lineColor: "#5a96d6",
+        textColor: "#142033",
+        background: "#ffffff",
+        clusterBkg: "#ffffff",
+        clusterBorder: "#cbd5e1",
+        primaryTextColor: "#142033"
+      },
+      flowchart: {
+        htmlLabels: true,
+        curve: "basis",
+        nodeSpacing: 78,
+        rankSpacing: 92
+      }
+    });
+  </script>
+</body>
+</html>

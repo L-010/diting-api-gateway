@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "file_id": "artifact_01JEXAMPLE",
+      "name": "result.zip",
+      "role": "archive",
+      "visibility": "user",
+      "status": "ready",
+      "size_bytes": 1048576,
+      "content_type": "application/zip",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expires_at": "2026-11-09T00:00:00Z"
+    }
+  ]
+}

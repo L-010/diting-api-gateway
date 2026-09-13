@@ -1,0 +1,109 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Pre-Deploy Checks
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate configuration
+      run: |
+        echo "🔍 Validating configuration files..."
+        if [ ! -f "docker-compose.prod.yml" ]; then
+          echo "❌ docker-compose.prod.yml not found"
+          exit 1
+        fi
+
+        if [ ! -f ".env.production.example" ]; then
+          echo "❌ .env.production.example not found"
+          exit 1
+        fi
+
+        echo "✅ Configuration files validated"
+
+    - name: Check for secrets in code
+      run: |
+        echo "🔒 Scanning for potential secrets..."
+        if grep -r "password" --include="*.py" --include="*.js" --include="*.ts" | grep -v ".example" | grep -v "PASSWORD"; then
+          echo "⚠️ Possible hardcoded passwords found"
+          exit 1
+        fi
+        echo "✅ No obvious secrets found"
+
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    name: Build Docker Images
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build backend image
+      run: |
+        echo "🔨 Building backend image..."
+        docker build -t api-gateway-backend:${{ github.sha }} -f backend/Dockerfile backend/
+        echo "✅ Backend image built"
+
+    - name: Build frontend image
+      run: |
+        echo "🔨 Building frontend image..."
+        docker build -t api-gateway-frontend:${{ github.sha }} -f frontend/Dockerfile frontend/
+        echo "✅ Frontend image built"
+
+    - name: Validate images
+      run: |
+        echo "🔍 Validating built images..."
+        docker inspect api-gateway-backend:${{ github.sha }}
+        docker inspect api-gateway-frontend:${{ github.sha }}
+        echo "✅ Images validated"
+
+  notify:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    name: Notify Deployment Ready
+    if: success()
+
+    steps:
+    - name: Send success notification
+      run: |
+        echo "✅ Build and validation passed!"
+        echo "Ready for deployment"
+
+    - name: Notify Slack (optional)
+      if: vars.SLACK_WEBHOOK != ''
+      run: |
+        curl -X POST ${{ vars.SLACK_WEBHOOK }} \
+          -H 'Content-Type: application/json' \
+          -d '{
+            "text": "✅ API Gateway build successful - Ready for deployment",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*API Gateway Build Status*\n✅ All checks passed\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                }
+              }
+            ]
+          }'

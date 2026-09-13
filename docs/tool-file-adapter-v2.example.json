@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "id_param": "job_id",
+  "file_id_param": "file_id",
+  "task_id_selector": "$.job_id",
+  "status_selector": "$.status",
+  "terminal_statuses": ["succeeded", "failed", "cancelled"],
+  "routes": {
+    "status": {
+      "endpoint_id": "同工具状态接口的平台接口ID",
+      "method": "GET",
+      "path_template": "/jobs/{job_id}"
+    },
+    "artifacts": {
+      "endpoint_id": "同工具Manifest接口的平台接口ID",
+      "method": "GET",
+      "path_template": "/jobs/{job_id}/artifacts",
+      "items_selector": "$.artifacts"
+    },
+    "file_download": {
+      "endpoint_id": "同工具单文件下载接口的平台接口ID",
+      "method": "GET",
+      "path_template": "/jobs/{job_id}/artifacts/{file_id}"
+    },
+    "file_delete": {
+      "endpoint_id": "同工具单文件删除接口的平台接口ID",
+      "method": "DELETE",
+      "path_template": "/jobs/{job_id}/artifacts/{file_id}"
+    }
+  },
+  "artifacts": {
+    "items_selector": "$.artifacts",
+    "id_selector": "$.file_id",
+    "name_selector": "$.name",
+    "role_selector": "$.role",
+    "visibility_selector": "$.visibility",
+    "status_selector": "$.status",
+    "size_selector": "$.size_bytes",
+    "content_type_selector": "$.content_type",
+    "sha256_selector": "$.sha256",
+    "created_at_selector": "$.created_at",
+    "expires_at_selector": "$.expires_at"
+  }
+}

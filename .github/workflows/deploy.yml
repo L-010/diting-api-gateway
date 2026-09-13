@@ -38,19 +38,45 @@ jobs:
     - name: Check for secrets in code
       run: |
         echo "🔒 Scanning for hardcoded secrets..."
-        # Look for suspicious patterns: actual values assigned to password/secret variables
-        # This excludes field names, parameters, and comments
-        if grep -rE '^\s*(password|secret|api_key|token)\s*=\s*["\'][^"\']*["\']' \
-          --include="*.py" --include="*.js" --include="*.ts" \
-          --exclude-dir=".venv" \
-          --exclude-dir="node_modules" \
-          --exclude-dir=".git" \
-          --exclude-dir="alembic" \
-          --exclude-dir="migrations"; then
-          echo "⚠️ Possible hardcoded secrets found"
-          exit 1
-        fi
-        echo "✅ No hardcoded secrets detected"
+        # Create a simple Python script to check for hardcoded secrets
+        python3 << 'EOF'
+        import os
+        import re
+
+        # Patterns to look for: actual hardcoded values, not field definitions
+        suspicious_patterns = [
+            r'password\s*=\s*["\'](?![\s]*["\'])[^"\']+["\']',
+            r'secret\s*=\s*["\'](?![\s]*["\'])[^"\']+["\']',
+            r'api_key\s*=\s*["\'](?![\s]*["\'])[^"\']+["\']',
+            r'token\s*=\s*["\'](?![\s]*["\'])[^"\']+["\']',
+        ]
+
+        exclude_dirs = {'.venv', 'node_modules', '.git', 'alembic', 'migrations', '__pycache__'}
+        found_secrets = False
+
+        for root, dirs, files in os.walk('.'):
+            # Remove excluded directories from traversal
+            dirs[:] = [d for d in dirs if d not in exclude_dirs]
+
+            for file in files:
+                if file.endswith(('.py', '.js', '.ts')):
+                    filepath = os.path.join(root, file)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                            for i, line in enumerate(f, 1):
+                                for pattern in suspicious_patterns:
+                                    if re.search(pattern, line, re.IGNORECASE):
+                                        print(f"⚠️  Suspicious pattern found in {filepath}:{i}")
+                                        found_secrets = True
+                    except:
+                        pass
+
+        if found_secrets:
+            print("❌ Hardcoded secrets detected")
+            exit(1)
+        else:
+            print("✅ No hardcoded secrets detected")
+        EOF
 
   build:
     needs: check

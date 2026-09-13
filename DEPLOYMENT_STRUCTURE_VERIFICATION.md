@@ -16,12 +16,12 @@
 1. **项目代码部署位置**
    - 当前指南: `cd /opt && git clone ... && cd api-gateway`
    - **问题**: 项目代码在 `/opt/api-gateway`，不在 `/Data` 下
-   - **解决**: 应改为 `cd /Data/api-mvp && git clone ... && cd api-gateway`
+   - **解决**: 应改为 `cd /Data/earthquake-api-gateway && git clone ... && cd api-gateway`
 
 2. **数据存储位置** ✅
-   - MySQL数据: `/Data/api-mvp/mysql` ✅
-   - 品牌资源: `/Data/api-mvp/brand-assets` ✅
-   - 备份数据: `/Data/api-mvp/backups/mysql` ✅
+   - MySQL数据: `/Data/earthquake-api-gateway/mysql` ✅
+   - 品牌资源: `/Data/earthquake-api-gateway/brand-assets` ✅
+   - 备份数据: `/Data/earthquake-api-gateway/backups/mysql` ✅
 
 ### ✅ 需求2：配置专用MySQL数据库（Docker容器化）
 
@@ -33,7 +33,7 @@
 ```yaml
 ✅ MySQL 容器已定义（第2-28行）
 ✅ 使用官方镜像: mysql:8.0
-✅ 数据卷挂载: ${MYSQL_DATA_DIR:-/Data/api-mvp/mysql}:/var/lib/mysql
+✅ 数据卷挂载: ${MYSQL_DATA_DIR:-/Data/earthquake-api-gateway/mysql}:/var/lib/mysql
 ✅ 健康检查: 已配置
 ✅ 环境变量: 
    - MYSQL_DATABASE: 通过 .env.production 传入
@@ -48,7 +48,7 @@
 ✅ MySQL 容器启动顺序（第52行）: "${COMPOSE[@]}" up -d mysql
 ✅ 依赖检查（健康检查）
 ✅ 数据库迁移（第53行）: 等待MySQL启动后执行迁移
-✅ 默认数据目录（第38行）: ${mysql_data_dir:-/Data/api-mvp/mysql}
+✅ 默认数据目录（第38行）: ${mysql_data_dir:-/Data/earthquake-api-gateway/mysql}
 ```
 
 **后端容器依赖关系**:
@@ -77,7 +77,7 @@
 
 ```
 /Data/
-├── api-mvp/                          # 项目根目录
+├── earthquake-api-gateway/                          # 项目根目录
 │   ├── project/                      # 👈 项目代码（需要更新指南）
 │   │   ├── backend/
 │   │   ├── frontend/
@@ -116,8 +116,8 @@ cd api-gateway
 
 **建议改为**:
 ```bash
-# 选择部署目录（在/Data/api-mvp下）
-cd /Data/api-mvp
+# 选择部署目录（在/Data/earthquake-api-gateway下）
+cd /Data/earthquake-api-gateway
 
 # 克隆GitHub仓库
 git clone https://github.com/YOUR_USERNAME/api-gateway.git project
@@ -128,12 +128,12 @@ cd project
 
 **当前** (第38-40行):
 ```bash
-mysql_data_dir="${mysql_data_dir:-/Data/api-mvp/mysql}"
-brand_asset_dir_host="${brand_asset_dir_host:-/Data/api-mvp/brand-assets}"
-backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
+mysql_data_dir="${mysql_data_dir:-/Data/earthquake-api-gateway/mysql}"
+brand_asset_dir_host="${brand_asset_dir_host:-/Data/earthquake-api-gateway/brand-assets}"
+backup_dir="${backup_dir:-/Data/earthquake-api-gateway/backups/mysql}"
 ```
 
-**状态**: ✅ 已正确设置为 /Data/api-mvp 下
+**状态**: ✅ 已正确设置为 /Data/earthquake-api-gateway 下
 
 ### 3. 项目隔离验证
 
@@ -142,7 +142,7 @@ backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
 
 方案A - 按项目名隔离（推荐）:
 /Data/
-├── api-mvp/                    ← 地震局API项目
+├── earthquake-api-gateway/                    ← 地震局API项目
 │   ├── project/
 │   ├── mysql/
 │   └── ...
@@ -170,7 +170,7 @@ backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
 ### Docker容器配置
 
 - [x] MySQL容器已定义
-- [x] 数据卷挂载到 /Data/api-mvp/mysql
+- [x] 数据卷挂载到 /Data/earthquake-api-gateway/mysql
 - [x] 环境变量通过 .env.production 传入
 - [x] 健康检查已配置
 - [x] 依赖关系正确
@@ -180,7 +180,7 @@ backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
 
 ### 部署脚本检查
 
-- [x] 创建 /Data/api-mvp 目录结构
+- [x] 创建 /Data/earthquake-api-gateway 目录结构
 - [x] 设置目录权限 (777)
 - [x] 启动MySQL容器
 - [x] 执行数据库迁移
@@ -210,8 +210,8 @@ backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
 ### 需要修改的文档
 
 1. **GITHUB_DEPLOYMENT.md** 第2.2节
-   - 改为: `cd /Data/api-mvp` 而非 `cd /opt`
-   - 项目克隆到: `/Data/api-mvp/project` (或使用 `-p` 选项改名)
+   - 改为: `cd /Data/earthquake-api-gateway` 而非 `cd /opt`
+   - 项目克隆到: `/Data/earthquake-api-gateway/project` (或使用 `-p` 选项改名)
 
 2. **新增文档** (可选): DEPLOYMENT_STRUCTURE.md
    - 说明 /Data 下的目录结构
@@ -221,7 +221,7 @@ backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
 
 **完全满足需求**:
 - ✅ MySQL 在Docker容器中运行
-- ✅ 数据存储在 /Data/api-mvp/mysql
+- ✅ 数据存储在 /Data/earthquake-api-gateway/mysql
 - ✅ 独立的数据库、用户、密码
 - ✅ 健康检查确保可靠性
 - ✅ 支持自动重启
@@ -229,7 +229,7 @@ backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
 ### 项目隔离 ✅
 
 **完全满足需求**:
-- ✅ 所有数据在 /Data/api-mvp 下
+- ✅ 所有数据在 /Data/earthquake-api-gateway 下
 - ✅ MySQL数据、品牌资源、备份分离存储
 - ✅ 容器网络隔离（internal bridge）
 - ✅ 支持多项目并行部署
@@ -241,21 +241,21 @@ backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
 ### 现状
 
 ✅ **MySQL容器化**: 完全满足，已正确配置  
-✅ **项目隔离**: 完全满足，数据目录已配置在 /Data/api-mvp  
-⚠️ **代码部署位置**: 部分满足，建议从 /opt 改为 /Data/api-mvp
+✅ **项目隔离**: 完全满足，数据目录已配置在 /Data/earthquake-api-gateway  
+⚠️ **代码部署位置**: 部分满足，建议从 /opt 改为 /Data/earthquake-api-gateway
 
 ### 建议修改
 
-1. 更新 GITHUB_DEPLOYMENT.md 第2.2节，改为 `/Data/api-mvp` 部署
-2. 保持所有文档中 `/Data/api-mvp` 的一致性
+1. 更新 GITHUB_DEPLOYMENT.md 第2.2节，改为 `/Data/earthquake-api-gateway` 部署
+2. 保持所有文档中 `/Data/earthquake-api-gateway` 的一致性
 3. 验证部署时使用新的路径
 
 ### 修改后的完整流程
 
 ```bash
 # 1. 在服务器上创建目录
-sudo mkdir -p /Data/api-mvp/{mysql,brand-assets,backups/mysql,project}
-cd /Data/api-mvp
+sudo mkdir -p /Data/earthquake-api-gateway/{mysql,brand-assets,backups/mysql,project}
+cd /Data/earthquake-api-gateway
 
 # 2. 克隆项目
 git clone https://github.com/YOUR_USERNAME/api-gateway.git project
@@ -268,5 +268,5 @@ cd project
 ./scripts/deploy-prod.sh --build
 ```
 
-所有文件都在 `/Data/api-mvp` 下，MySQL数据库Docker容器化，完全满足需求！
+所有文件都在 `/Data/earthquake-api-gateway` 下，MySQL数据库Docker容器化，完全满足需求！
 

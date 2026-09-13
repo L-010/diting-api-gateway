@@ -16,7 +16,7 @@ bash scripts/pre-deploy-check.sh
 bash scripts/gen-env-production.sh
 
 # 3. 打包上传
-tar czf api-mvp.tar.gz .
+tar czf earthquake-api-gateway.tar.gz .
 # scp上传到Ubuntu
 ```
 
@@ -30,9 +30,9 @@ sudo usermod -aG docker ubuntu
 docker --version  # 验证
 
 # 2. 目录准备
-sudo mkdir -p /Data/api-mvp/{mysql,backups,brand-assets}
-sudo chown 999:999 /Data/api-mvp/mysql
-sudo chown 10001:10001 /Data/api-mvp/brand-assets
+sudo mkdir -p /Data/earthquake-api-gateway/{mysql,backups,brand-assets}
+sudo chown 999:999 /Data/earthquake-api-gateway/mysql
+sudo chown 10001:10001 /Data/earthquake-api-gateway/brand-assets
 sudo mkdir -p /etc/ssl/api-gateway
 
 # 3. 上传证书
@@ -43,10 +43,10 @@ sudo mv /tmp/key.pem /etc/ssl/api-gateway/privkey.pem
 
 # 4. 解压项目
 cd /opt
-tar xzf api-mvp.tar.gz -C api-mvp
+tar xzf earthquake-api-gateway.tar.gz -C /Data/earthquake-api-gateway
 
 # 5. 检查和部署
-cd /opt/api-mvp
+cd /Data/earthquake-api-gateway/project
 bash scripts/pre-deploy-check.sh
 bash scripts/deploy-prod.sh --build
 
@@ -146,7 +146,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs backen
    ```bash
    sudo crontab -e
    # 添加备份任务
-   15 2 * * * cd /opt/api-mvp && ./scripts/backup-mysql.sh
+   15 2 * * * cd /Data/earthquake-api-gateway/project && ./scripts/backup-mysql.sh
    ```
 
 ## 常见问题快速解决
@@ -157,16 +157,16 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs backen
 | 迁移失败 | 检查EXPECTED_ALEMBIC_HEAD，验证用户名冲突 |
 | 前端无法访问 | 检查BACKEND_ORIGIN，验证后端容器状态 |
 | TLS证书错误 | 检查证书路径、格式、权限 |
-| 磁盘满 | 清理old backups: `find /Data/api-mvp/backups -mtime +14 -delete` |
+| 磁盘满 | 清理old backups: `find /Data/earthquake-api-gateway/backups -mtime +14 -delete` |
 
 ## 文件位置速查
 
 | 文件 | 位置 |
 |-----|-----|
-| 配置文件 | `/opt/api-mvp/.env.production` |
-| MySQL数据 | `/Data/api-mvp/mysql` |
-| 备份文件 | `/Data/api-mvp/backups/mysql` |
-| 品牌资源 | `/opt/api-mvp/backend/data/brand-assets` |
+| 配置文件 | `/Data/earthquake-api-gateway/project/.env.production` |
+| MySQL数据 | `/Data/earthquake-api-gateway/mysql` |
+| 备份文件 | `/Data/earthquake-api-gateway/backups/mysql` |
+| 品牌资源 | `/Data/earthquake-api-gateway/project/backend/data/brand-assets` |
 | TLS证书 | `/etc/ssl/api-gateway/` |
 | Nginx配置 | `/etc/nginx/sites-available/api-gateway` |
 | 日志文件 | `docker compose logs` |
@@ -205,7 +205,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml down
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 
 # 4. 从备份恢复（如果数据损坏）
-gunzip < /Data/api-mvp/backups/mysql/latest.sql.gz | \
+gunzip < /Data/earthquake-api-gateway/backups/mysql/latest.sql.gz | \
   docker compose --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
   mysql -u api_user -p password api_gateway
 

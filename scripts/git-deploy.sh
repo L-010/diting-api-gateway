@@ -6,9 +6,9 @@
 set -euo pipefail
 
 # ==================== 配置 ====================
-PROJECT_DIR="/opt/api-mvp"
+PROJECT_DIR="/Data/earthquake-api-gateway/project"
 LOG_FILE="/var/log/api-gateway-deploy.log"
-BACKUP_DIR="/Data/api-mvp/backups"
+BACKUP_DIR="/Data/earthquake-api-gateway/backups"
 SLACK_WEBHOOK="${SLACK_WEBHOOK_URL:-}"
 GITHUB_REPO="${GITHUB_REPO:-origin}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"

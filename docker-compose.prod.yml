@@ -13,7 +13,7 @@ services:
       - --default-storage-engine=InnoDB
       - --skip-name-resolve
     volumes:
-      - ${MYSQL_DATA_DIR:-/Data/api-mvp/mysql}:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:-/Data/earthquake-api-gateway/mysql}:/var/lib/mysql
     networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
@@ -43,7 +43,7 @@ services:
     ports:
       - "0.0.0.0:${BACKEND_PORT:-8000}:8000"
     volumes:
-      - ${BRAND_ASSET_DIR_HOST:-/Data/api-mvp/brand-assets}:/app/data/brand-assets
+      - ${BRAND_ASSET_DIR_HOST:-/Data/earthquake-api-gateway/brand-assets}:/app/data/brand-assets
     networks: [internal]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/livez', timeout=3)"]

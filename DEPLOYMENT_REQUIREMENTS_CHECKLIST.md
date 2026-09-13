@@ -19,7 +19,7 @@
 
 **目录结构**:
 ```
-/Data/api-mvp/
+/Data/earthquake-api-gateway/
 ├── project/                    ← 项目代码存放位置
 │   ├── backend/
 │   ├── frontend/
@@ -43,33 +43,33 @@
 1. **docker-compose.prod.yml** (第16行):
    ```yaml
    volumes:
-     - ${MYSQL_DATA_DIR:-/Data/api-mvp/mysql}:/var/lib/mysql
+     - ${MYSQL_DATA_DIR:-/Data/earthquake-api-gateway/mysql}:/var/lib/mysql
    ```
-   ✅ MySQL数据卷默认挂载到 `/Data/api-mvp/mysql`
+   ✅ MySQL数据卷默认挂载到 `/Data/earthquake-api-gateway/mysql`
 
 2. **docker-compose.prod.yml** (第46行):
    ```yaml
    volumes:
-     - ${BRAND_ASSET_DIR_HOST:-/Data/api-mvp/brand-assets}:/app/data/brand-assets
+     - ${BRAND_ASSET_DIR_HOST:-/Data/earthquake-api-gateway/brand-assets}:/app/data/brand-assets
    ```
-   ✅ 品牌资源卷默认挂载到 `/Data/api-mvp/brand-assets`
+   ✅ 品牌资源卷默认挂载到 `/Data/earthquake-api-gateway/brand-assets`
 
 3. **deploy-prod.sh** (第38-40行):
    ```bash
-   mysql_data_dir="${mysql_data_dir:-/Data/api-mvp/mysql}"
-   brand_asset_dir_host="${brand_asset_dir_host:-/Data/api-mvp/brand-assets}"
-   backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
+   mysql_data_dir="${mysql_data_dir:-/Data/earthquake-api-gateway/mysql}"
+   brand_asset_dir_host="${brand_asset_dir_host:-/Data/earthquake-api-gateway/brand-assets}"
+   backup_dir="${backup_dir:-/Data/earthquake-api-gateway/backups/mysql}"
    ```
-   ✅ 部署脚本已配置所有数据目录在 `/Data/api-mvp` 下
+   ✅ 部署脚本已配置所有数据目录在 `/Data/earthquake-api-gateway` 下
 
 **更新的文档指导**:
 
 | 文档 | 更新内容 | 状态 |
 |------|---------|------|
-| GITHUB_DEPLOYMENT.md 2.1节 | 明确创建 `/Data/api-mvp` 结构 | ✅ 已更新 |
-| GITHUB_DEPLOYMENT.md 2.2节 | 改为 `cd /Data/api-mvp` 克隆项目 | ✅ 已更新 |
-| QUICK_REFERENCE.md | 5步快速部署中强调 `/Data/api-mvp/` | ✅ 已更新 |
-| START_HERE.md | 第3步克隆改为进入 `/Data/api-mvp` | ✅ 已更新 |
+| GITHUB_DEPLOYMENT.md 2.1节 | 明确创建 `/Data/earthquake-api-gateway` 结构 | ✅ 已更新 |
+| GITHUB_DEPLOYMENT.md 2.2节 | 改为 `cd /Data/earthquake-api-gateway` 克隆项目 | ✅ 已更新 |
+| QUICK_REFERENCE.md | 5步快速部署中强调 `/Data/earthquake-api-gateway/` | ✅ 已更新 |
+| START_HERE.md | 第3步克隆改为进入 `/Data/earthquake-api-gateway` | ✅ 已更新 |
 
 ---
 
@@ -104,9 +104,9 @@
 **3. 数据持久化**
 
 ```bash
-✅ 数据卷: /Data/api-mvp/mysql:/var/lib/mysql
+✅ 数据卷: /Data/earthquake-api-gateway/mysql:/var/lib/mysql
 ✅ 数据不丢失: 容器重启时保留
-✅ 备份目录: /Data/api-mvp/backups/mysql
+✅ 备份目录: /Data/earthquake-api-gateway/backups/mysql
 ```
 
 **4. 字符集配置** (docker-compose.prod.yml 第10-14行)
@@ -159,7 +159,7 @@ Workers:
 **3. 数据隔离**
 
 ```
-✅ MySQL数据: /Data/api-mvp/mysql/
+✅ MySQL数据: /Data/earthquake-api-gateway/mysql/
 ✅ 其他项目的MySQL: /Data/other-project/mysql/
 ✅ 完全独立，互不影响
 ```
@@ -170,7 +170,7 @@ Workers:
 
 ```bash
 步骤1: 创建数据目录
-  mkdir -p /Data/api-mvp/{mysql,brand-assets,backups/mysql}
+  mkdir -p /Data/earthquake-api-gateway/{mysql,brand-assets,backups/mysql}
 
 步骤2: 启动MySQL容器
   docker compose up -d mysql
@@ -220,7 +220,7 @@ Workers:
 
 ```
 /Data/
-├── api-mvp/                    ← 项目1：地震局API
+├── earthquake-api-gateway/                    ← 项目1：地震局API
 │   ├── project/
 │   ├── mysql/
 │   ├── brand-assets/
@@ -247,7 +247,7 @@ Workers:
 
 ### 代码部署
 
-- [x] 项目代码部署在 `/Data/api-mvp/project/`
+- [x] 项目代码部署在 `/Data/earthquake-api-gateway/project/`
 - [x] 所有源代码文件完整
 - [x] Docker配置文件完整
 - [x] 部署脚本完整且可执行
@@ -256,7 +256,7 @@ Workers:
 ### MySQL容器化
 
 - [x] MySQL使用Docker容器
-- [x] MySQL数据卷在 `/Data/api-mvp/mysql/`
+- [x] MySQL数据卷在 `/Data/earthquake-api-gateway/mysql/`
 - [x] 健康检查已配置
 - [x] 自动重启已配置
 - [x] 数据库迁移自动执行
@@ -264,7 +264,7 @@ Workers:
 
 ### 项目隔离
 
-- [x] 所有数据在 `/Data/api-mvp/` 下
+- [x] 所有数据在 `/Data/earthquake-api-gateway/` 下
 - [x] MySQL数据独立存储
 - [x] 品牌资源独立存储
 - [x] 备份数据独立存储
@@ -295,7 +295,7 @@ Workers:
 
 ```bash
 # 1. 创建数据目录结构
-sudo mkdir -p /Data/api-mvp/{project,mysql,brand-assets,backups/mysql}
+sudo mkdir -p /Data/earthquake-api-gateway/{project,mysql,brand-assets,backups/mysql}
 
 # 2. 安装Docker
 sudo apt update && sudo apt install -y docker.io docker-compose
@@ -308,7 +308,7 @@ sudo certbot certonly --standalone -d your-domain.com
 
 ```bash
 # 1. 进入数据目录
-cd /Data/api-mvp
+cd /Data/earthquake-api-gateway
 
 # 2. 克隆项目
 git clone https://github.com/YOUR_ORG/api-gateway.git project

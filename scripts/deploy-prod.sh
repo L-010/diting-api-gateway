@@ -35,9 +35,9 @@ backup_dir="$(production_env_value BACKUP_DIR || true)"
 [[ "$expected_head" == "a6b7c8d9e0f1" ]] || { echo "EXPECTED_ALEMBIC_HEAD 必须为 a6b7c8d9e0f1" >&2; exit 1; }
 [[ -n "$frontend_origin" && -n "$public_gateway_base_url" ]] || { echo "必须配置正式域名" >&2; exit 1; }
 [[ -r "$tls_cert_file" && -r "$tls_key_file" ]] || { echo "TLS 证书或私钥不可读" >&2; exit 1; }
-mysql_data_dir="${mysql_data_dir:-/Data/api-mvp/mysql}"
-brand_asset_dir_host="${brand_asset_dir_host:-/Data/api-mvp/brand-assets}"
-backup_dir="${backup_dir:-/Data/api-mvp/backups/mysql}"
+mysql_data_dir="${mysql_data_dir:-/Data/earthquake-api-gateway/mysql}"
+brand_asset_dir_host="${brand_asset_dir_host:-/Data/earthquake-api-gateway/brand-assets}"
+backup_dir="${backup_dir:-/Data/earthquake-api-gateway/backups/mysql}"
 mkdir -p "$mysql_data_dir" "$brand_asset_dir_host" "$backup_dir"
 if [[ "$(id -u)" -eq 0 ]]; then
   chown -R 10001:10001 "$brand_asset_dir_host"

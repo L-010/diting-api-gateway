@@ -8,7 +8,7 @@
 
 ```bash
 # 1️⃣ 进入数据目录（所有文件都在/Data下）
-cd /Data/api-mvp
+cd /Data/earthquake-api-gateway
 
 # 2️⃣ 克隆项目
 git clone https://github.com/YOUR_ORG/api-gateway.git project
@@ -31,11 +31,11 @@ sudo nginx -t && sudo systemctl reload nginx
 
 **完成！** 访问 https://your-domain.com
 
-**注意**: 所有数据存储在 `/Data/api-mvp/` 下：
-- 项目代码: `/Data/api-mvp/project/`
-- MySQL数据: `/Data/api-mvp/mysql/` (Docker卷)
-- 品牌资源: `/Data/api-mvp/brand-assets/`
-- 数据备份: `/Data/api-mvp/backups/mysql/`
+**注意**: 所有数据存储在 `/Data/earthquake-api-gateway/` 下：
+- 项目代码: `/Data/earthquake-api-gateway/project/`
+- MySQL数据: `/Data/earthquake-api-gateway/mysql/` (Docker卷)
+- 品牌资源: `/Data/earthquake-api-gateway/brand-assets/`
+- 数据备份: `/Data/earthquake-api-gateway/backups/mysql/`
 
 ---
 
@@ -140,7 +140,7 @@ curl -I https://api.example.com
 | 数据库连接失败 | 验证 .env.production 中的数据库凭据 |
 | Nginx报错 | 运行 `sudo nginx -t` 检查配置 |
 | 邮件无法发送 | 检查 .env.production 中的 SMTP 配置 |
-| 磁盘满 | 检查 /Data/api-mvp 目录大小 |
+| 磁盘满 | 检查 /Data/earthquake-api-gateway 目录大小 |
 
 ---
 
@@ -149,7 +149,7 @@ curl -I https://api.example.com
 - [ ] Ubuntu 20.04/22.04 LTS
 - [ ] Docker 20.10+ 已安装
 - [ ] Docker Compose 2.0+ 已安装
-- [ ] /Data/api-mvp 目录已创建
+- [ ] /Data/earthquake-api-gateway 目录已创建
 - [ ] TLS证书已准备（Let's Encrypt或自签名）
 - [ ] 域名DNS已解析
 - [ ] 项目已推送到GitHub
@@ -164,8 +164,8 @@ curl -I https://api.example.com
 # .env.production 中的端口配置
 BACKEND_PORT=8000          # 后端API端口
 FRONTEND_PORT=3000         # 前端HTTP端口
-MYSQL_DATA_DIR=/Data/api-mvp/mysql              # MySQL数据目录
-BRAND_ASSET_DIR_HOST=/Data/api-mvp/brand-assets # 品牌资源目录
+MYSQL_DATA_DIR=/Data/earthquake-api-gateway/mysql              # MySQL数据目录
+BRAND_ASSET_DIR_HOST=/Data/earthquake-api-gateway/brand-assets # 品牌资源目录
 ```
 
 ### 关键环境变量
@@ -311,7 +311,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml restart mys
 ### 磁盘满
 ```bash
 # 检查磁盘
-df -h /Data/api-mvp
+df -h /Data/earthquake-api-gateway
 
 # 清理Docker日志
 docker container prune
@@ -330,7 +330,7 @@ rm -f backup-*.sql  # 保留最近的备份
 docker stats
 
 # 查看磁盘使用
-du -sh /Data/api-mvp/*
+du -sh /Data/earthquake-api-gateway/*
 
 # 查看MySQL数据大小
 docker compose --env-file .env.production -f docker-compose.prod.yml exec mysql \

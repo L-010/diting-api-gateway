@@ -52,11 +52,11 @@ sudo apt-get install -y nginx
 建议使用 root 的 cron 每天执行：
 
 ```cron
-15 2 * * * cd /opt/api-mvp && ./scripts/backup-mysql.sh >> /var/log/api-gateway-backup.log 2>&1
-45 2 * * * cd /opt/api-mvp && docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python -m app.maintenance cleanup >> /var/log/api-gateway-cleanup.log 2>&1
+15 2 * * * cd /Data/earthquake-api-gateway/project && ./scripts/backup-mysql.sh >> /var/log/api-gateway-backup.log 2>&1
+45 2 * * * cd /Data/earthquake-api-gateway/project && docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python -m app.maintenance cleanup >> /var/log/api-gateway-cleanup.log 2>&1
 ```
 
-备份默认保留 14 天并存放在 `/Data/api-mvp/backups/mysql`。当前方案只保存在本机；服务器磁盘、主板或整机故障可能同时损坏数据库和备份，正式运行后必须增加异地或对象存储副本。
+备份默认保留 14 天并存放在 `/Data/earthquake-api-gateway/backups/mysql`。当前方案只保存在本机；服务器磁盘、主板或整机故障可能同时损坏数据库和备份，正式运行后必须增加异地或对象存储副本。
 
 ## 验收
 

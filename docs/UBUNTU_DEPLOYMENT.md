@@ -17,7 +17,7 @@
 ./scripts/gen-env-production.sh
 
 # 3. 将项目上传到Ubuntu服务器
-scp -r . ubuntu@server:/opt/api-mvp/
+scp -r . ubuntu@server:/Data/earthquake-api-gateway/project/
 ```
 
 ### 在Ubuntu服务器上部署
@@ -25,11 +25,11 @@ scp -r . ubuntu@server:/opt/api-mvp/
 ```bash
 # 1. 登录服务器
 ssh ubuntu@server
-cd /opt/api-mvp
+cd /Data/earthquake-api-gateway/project
 
 # 2. 创建必要的目录
-sudo mkdir -p /Data/api-mvp/{mysql,backups}
-sudo chown -R 999:999 /Data/api-mvp/mysql  # mysql容器用户
+sudo mkdir -p /Data/earthquake-api-gateway/{mysql,backups}
+sudo chown -R 999:999 /Data/earthquake-api-gateway/mysql  # mysql容器用户
 sudo mkdir -p /etc/ssl/api-gateway
 sudo chown -R root:root /etc/ssl/api-gateway
 
@@ -75,17 +75,17 @@ docker compose version
 
 ```bash
 # 创建主目录
-sudo mkdir -p /opt/api-mvp
-sudo chown ubuntu:ubuntu /opt/api-mvp
+sudo mkdir -p /Data/earthquake-api-gateway/project
+sudo chown ubuntu:ubuntu /Data/earthquake-api-gateway/project
 
 # 创建数据卷目录
-sudo mkdir -p /Data/api-mvp/{mysql,backups,brand-assets}
+sudo mkdir -p /Data/earthquake-api-gateway/{mysql,backups,brand-assets}
 
 # 设置权限
-sudo chown 999:999 /Data/api-mvp/mysql      # MySQL容器用户
-sudo chmod 700 /Data/api-mvp/mysql
-sudo chown 10001:10001 /Data/api-mvp/brand-assets  # App容器用户
-sudo chmod 700 /Data/api-mvp/brand-assets
+sudo chown 999:999 /Data/earthquake-api-gateway/mysql      # MySQL容器用户
+sudo chmod 700 /Data/earthquake-api-gateway/mysql
+sudo chown 10001:10001 /Data/earthquake-api-gateway/brand-assets  # App容器用户
+sudo chmod 700 /Data/earthquake-api-gateway/brand-assets
 
 # 创建TLS证书目录
 sudo mkdir -p /etc/ssl/api-gateway
@@ -114,19 +114,19 @@ sudo chown root:docker /etc/ssl/api-gateway/privkey.pem
 ```bash
 # 在Windows上
 cd 地震局API部署
-tar czf api-mvp.tar.gz .
-scp api-mvp.tar.gz ubuntu@server:/opt/
+tar czf earthquake-api-gateway.tar.gz .
+scp earthquake-api-gateway.tar.gz ubuntu@server:/opt/
 
 # 在Ubuntu上
 cd /opt
-sudo tar xzf api-mvp.tar.gz -C api-mvp --strip-components=1
-cd /opt/api-mvp
+sudo tar xzf earthquake-api-gateway.tar.gz -C /Data/earthquake-api-gateway --strip-components=1
+cd /Data/earthquake-api-gateway/project
 ```
 
 #### 生成和配置.env.production
 
 ```bash
-cd /opt/api-mvp
+cd /Data/earthquake-api-gateway/project
 
 # 方法1：使用交互式脚本（推荐）
 bash scripts/gen-env-production.sh
@@ -180,7 +180,7 @@ SMTP_FROM=noreply@example.com
 ### 第三步：执行部署
 
 ```bash
-cd /opt/api-mvp
+cd /Data/earthquake-api-gateway/project
 
 # 完整部署（包括构建镜像）
 bash scripts/deploy-prod.sh --build
@@ -288,10 +288,10 @@ sudo crontab -e
 
 # 添加以下任务
 # 每天凌晨2:15备份MySQL
-15 2 * * * cd /opt/api-mvp && ./scripts/backup-mysql.sh >> /var/log/api-gateway-backup.log 2>&1
+15 2 * * * cd /Data/earthquake-api-gateway/project && ./scripts/backup-mysql.sh >> /var/log/api-gateway-backup.log 2>&1
 
 # 每天凌晨2:45执行清理任务
-45 2 * * * cd /opt/api-mvp && \
+45 2 * * * cd /Data/earthquake-api-gateway/project && \
   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend \
   python -m app.maintenance cleanup >> /var/log/api-gateway-cleanup.log 2>&1
 ```
@@ -475,15 +475,15 @@ sudo systemctl restart nginx
 df -h /Data
 
 # 2. 检查MySQL数据卷大小
-du -sh /Data/api-mvp/mysql
+du -sh /Data/earthquake-api-gateway/mysql
 
 # 3. 检查备份大小
-du -sh /Data/api-mvp/backups
+du -sh /Data/earthquake-api-gateway/backups
 
 # 4. 清理old backups
-ls -ltr /Data/api-mvp/backups/mysql/ | tail -5
+ls -ltr /Data/earthquake-api-gateway/backups/mysql/ | tail -5
 # 手动删除超过14天的备份
-find /Data/api-mvp/backups -mtime +14 -delete
+find /Data/earthquake-api-gateway/backups -mtime +14 -delete
 ```
 
 **解决方案**：
@@ -497,11 +497,11 @@ find /Data/api-mvp/backups -mtime +14 -delete
 
 ```bash
 # 手动备份
-cd /opt/api-mvp
+cd /Data/earthquake-api-gateway/project
 bash scripts/backup-mysql.sh
 
 # 查看备份
-ls -lh /Data/api-mvp/backups/mysql/
+ls -lh /Data/earthquake-api-gateway/backups/mysql/
 
 # 备份说明
 # - 每个备份文件名: api_gateway_YYYYMMDD_HHMMSS.sql
@@ -513,10 +513,10 @@ ls -lh /Data/api-mvp/backups/mysql/
 
 ```bash
 # 1. 检查可用备份
-ls -lh /Data/api-mvp/backups/mysql/
+ls -lh /Data/earthquake-api-gateway/backups/mysql/
 
 # 2. 恢复备份（假设备份文件为 api_gateway_20260913_020000.sql.gz）
-gunzip < /Data/api-mvp/backups/mysql/api_gateway_20260913_020000.sql.gz | \
+gunzip < /Data/earthquake-api-gateway/backups/mysql/api_gateway_20260913_020000.sql.gz | \
   docker compose --env-file .env.production -f docker-compose.prod.yml exec -T mysql \
   mysql -u api_user -p$(grep MYSQL_PASSWORD .env.production | cut -d= -f2) api_gateway
 
@@ -531,7 +531,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec mysql 
 ### 更新代码
 
 ```bash
-cd /opt/api-mvp
+cd /Data/earthquake-api-gateway/project
 
 # 1. 拉取最新代码
 git pull

@@ -33,7 +33,7 @@ git push -u origin main
 sudo apt update && sudo apt install -y docker.io docker-compose
 
 # 创建数据目录
-sudo mkdir -p /Data/api-mvp/{mysql,brand-assets,backups/mysql}
+sudo mkdir -p /Data/earthquake-api-gateway/{mysql,brand-assets,backups/mysql}
 
 # 获取TLS证书
 sudo certbot certonly --standalone -d your-domain.com
@@ -43,7 +43,7 @@ sudo certbot certonly --standalone -d your-domain.com
 
 ```bash
 # 进入数据目录（所有项目文件都在这里，避免污染服务器其他目录）
-cd /Data/api-mvp
+cd /Data/earthquake-api-gateway
 
 # 克隆项目
 git clone https://github.com/your-org/api-gateway.git project
@@ -311,7 +311,7 @@ https://your-domain.com/api → 后端API
 ✅ HTTPS强制启用  
 
 ### 数据安全
-✅ 数据持久化到/Data/api-mvp  
+✅ 数据持久化到/Data/earthquake-api-gateway  
 ✅ 支持数据库备份  
 ✅ 支持自动恢复  
 

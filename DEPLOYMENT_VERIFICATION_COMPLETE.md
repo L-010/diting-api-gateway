@@ -18,23 +18,23 @@
 #### 验证证据
 
 **1. docker-compose.prod.yml 配置** 
-- 第16行：MySQL数据卷 `${MYSQL_DATA_DIR:-/Data/api-mvp/mysql}:/var/lib/mysql`
-- 第46行：品牌资源 `${BRAND_ASSET_DIR_HOST:-/Data/api-mvp/brand-assets}:/app/data/brand-assets`
+- 第16行：MySQL数据卷 `${MYSQL_DATA_DIR:-/Data/earthquake-api-gateway/mysql}:/var/lib/mysql`
+- 第46行：品牌资源 `${BRAND_ASSET_DIR_HOST:-/Data/earthquake-api-gateway/brand-assets}:/app/data/brand-assets`
 
 **2. deploy-prod.sh 脚本**
-- 第38-40行：设置所有数据目录默认位置在 `/Data/api-mvp`
+- 第38-40行：设置所有数据目录默认位置在 `/Data/earthquake-api-gateway`
 - 第41行：创建目录 `mkdir -p "$mysql_data_dir" "$brand_asset_dir_host" "$backup_dir"`
 - 第52行：启动MySQL容器前创建目录
 
 **3. 文档已更新**
-- ✅ GITHUB_DEPLOYMENT.md 2.1节：创建 `/Data/api-mvp` 结构
-- ✅ GITHUB_DEPLOYMENT.md 2.2节：克隆到 `/Data/api-mvp/project`
-- ✅ QUICK_REFERENCE.md：5步快速部署强调 `/Data/api-mvp/`
-- ✅ START_HERE.md：第3步改为进入 `/Data/api-mvp`
+- ✅ GITHUB_DEPLOYMENT.md 2.1节：创建 `/Data/earthquake-api-gateway` 结构
+- ✅ GITHUB_DEPLOYMENT.md 2.2节：克隆到 `/Data/earthquake-api-gateway/project`
+- ✅ QUICK_REFERENCE.md：5步快速部署强调 `/Data/earthquake-api-gateway/`
+- ✅ START_HERE.md：第3步改为进入 `/Data/earthquake-api-gateway`
 
 **4. 最终目录结构**
 ```
-/Data/api-mvp/
+/Data/earthquake-api-gateway/
 ├── project/              ← 项目代码
 ├── mysql/                ← MySQL数据（Docker卷）
 ├── brand-assets/         ← 品牌资源
@@ -68,7 +68,7 @@ services:
       - --character-set-server=utf8mb4               # ✅ UTF-8完整支持
       - --default-storage-engine=InnoDB              # ✅ 事务支持
     volumes:
-      - ${MYSQL_DATA_DIR:-/Data/api-mvp/mysql}:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:-/Data/earthquake-api-gateway/mysql}:/var/lib/mysql
                                         # ✅ 数据卷在/Data下
     networks: [internal]                # ✅ 网络隔离
     healthcheck:
@@ -77,9 +77,9 @@ services:
 ```
 
 **2. 数据持久化**
-- ✅ MySQL数据存储在 `/Data/api-mvp/mysql/` Docker卷
+- ✅ MySQL数据存储在 `/Data/earthquake-api-gateway/mysql/` Docker卷
 - ✅ 容器重启后数据不丢失
-- ✅ 支持备份到 `/Data/api-mvp/backups/mysql/`
+- ✅ 支持备份到 `/Data/earthquake-api-gateway/backups/mysql/`
 
 **3. 容器依赖关系**
 ```yaml
@@ -111,8 +111,8 @@ backend:
 ### 部署前准备（服务器一次性配置）
 
 ```bash
-✅ sudo mkdir -p /Data/api-mvp/{project,mysql,brand-assets,backups/mysql}
-✅ sudo chmod 777 /Data/api-mvp/{mysql,brand-assets,backups}
+✅ sudo mkdir -p /Data/earthquake-api-gateway/{project,mysql,brand-assets,backups/mysql}
+✅ sudo chmod 777 /Data/earthquake-api-gateway/{mysql,brand-assets,backups}
 ✅ 安装Docker和docker-compose
 ✅ 配置TLS证书（Let's Encrypt或自签名）
 ```
@@ -120,11 +120,11 @@ backend:
 ### 部署执行流程
 
 ```bash
-✅ 第1步：cd /Data/api-mvp && git clone ... project
+✅ 第1步：cd /Data/earthquake-api-gateway && git clone ... project
 ✅ 第2步：cd project && ./scripts/gen-env-production.sh
    └─ 生成 .env.production 包含MySQL密码
 ✅ 第3步：./scripts/deploy-prod.sh --build
-   ├─ 创建 /Data/api-mvp/{mysql,brand-assets,backups}
+   ├─ 创建 /Data/earthquake-api-gateway/{mysql,brand-assets,backups}
    ├─ docker compose build (构建镜像)
    ├─ docker compose up -d mysql (启动MySQL)
    ├─ 等待MySQL健康检查通过
@@ -148,7 +148,7 @@ backend:
 
 ```
 /Data/
-├── api-mvp/                    # 项目1
+├── earthquake-api-gateway/                    # 项目1
 │   ├── project/
 │   ├── mysql/                  ← 独立MySQL
 │   ├── brand-assets/
@@ -184,7 +184,7 @@ backend:
 |------|---------|---------|
 | GITHUB_DEPLOYMENT.md | 2.1节和2.2节更新为 /Data 路径 | ✅ c00a1df |
 | QUICK_REFERENCE.md | 5步快速部署强调 /Data 路径 | ✅ c00a1df |
-| START_HERE.md | 第3步克隆改为 /Data/api-mvp | ✅ c00a1df |
+| START_HERE.md | 第3步克隆改为 /Data/earthquake-api-gateway | ✅ c00a1df |
 | DEPLOYMENT_STRUCTURE_VERIFICATION.md | 新增：验证目录结构满足需求 | ✅ c00a1df |
 | DEPLOYMENT_REQUIREMENTS_CHECKLIST.md | 新增：完整的需求检查清单 | ✅ c00a1df |
 
@@ -194,10 +194,10 @@ backend:
 
 ### 功能需求
 
-- [x] 所有项目数据存储在 `/Data/api-mvp/` 下
+- [x] 所有项目数据存储在 `/Data/earthquake-api-gateway/` 下
 - [x] 项目不污染服务器其他目录
 - [x] MySQL运行在Docker容器中
-- [x] MySQL数据卷在 `/Data/api-mvp/mysql/` 中
+- [x] MySQL数据卷在 `/Data/earthquake-api-gateway/mysql/` 中
 - [x] 支持多项目并行部署
 - [x] 每个项目有独立的MySQL数据库
 
@@ -242,7 +242,7 @@ backend:
 
 2. **在Ubuntu服务器上部署**
    ```bash
-   cd /Data/api-mvp
+   cd /Data/earthquake-api-gateway
    git clone https://github.com/YOUR_ORG/api-gateway.git project
    cd project
    ./scripts/gen-env-production.sh
@@ -274,15 +274,15 @@ backend:
 
 ## 📝 总结
 
-✅ **所有项目文件部署在 /Data/api-mvp 下**
-- 项目代码：`/Data/api-mvp/project/`
-- MySQL数据：`/Data/api-mvp/mysql/`
-- 品牌资源：`/Data/api-mvp/brand-assets/`
-- 数据备份：`/Data/api-mvp/backups/mysql/`
+✅ **所有项目文件部署在 /Data/earthquake-api-gateway 下**
+- 项目代码：`/Data/earthquake-api-gateway/project/`
+- MySQL数据：`/Data/earthquake-api-gateway/mysql/`
+- 品牌资源：`/Data/earthquake-api-gateway/brand-assets/`
+- 数据备份：`/Data/earthquake-api-gateway/backups/mysql/`
 
 ✅ **MySQL Docker容器化隔离完成**
 - 使用官方 mysql:8.0 镜像
-- 数据卷持久化在 `/Data/api-mvp/mysql/`
+- 数据卷持久化在 `/Data/earthquake-api-gateway/mysql/`
 - 容器网络隔离
 - 健康检查自动恢复
 - 支持多项目共存

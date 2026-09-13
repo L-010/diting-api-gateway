@@ -83,13 +83,13 @@ newgrp docker
 
 # ===== 关键：创建项目数据结构 =====
 # 所有项目文件都在 /Data 下，避免污染服务器其他目录
-sudo mkdir -p /Data/api-mvp/{project,mysql,brand-assets,backups/mysql}
+sudo mkdir -p /Data/earthquake-api-gateway/{project,mysql,brand-assets,backups/mysql}
 
 # 设置权限（允许Docker容器写入）
-sudo chmod 777 /Data/api-mvp/{mysql,brand-assets,backups}
+sudo chmod 777 /Data/earthquake-api-gateway/{mysql,brand-assets,backups}
 
 # ===== 目录结构说明 =====
-# /Data/api-mvp/
+# /Data/earthquake-api-gateway/
 #   ├── project/           ← 项目代码将克隆到这里
 #   ├── mysql/             ← MySQL容器数据卷（自动创建）
 #   ├── brand-assets/      ← 品牌资源卷
@@ -101,7 +101,7 @@ sudo chmod 777 /Data/api-mvp/{mysql,brand-assets,backups}
 
 ```bash
 # 进入数据目录（所有项目文件都在这里）
-cd /Data/api-mvp
+cd /Data/earthquake-api-gateway
 
 # 克隆GitHub仓库到 project 子目录
 git clone https://github.com/YOUR_USERNAME/api-gateway.git project
@@ -113,7 +113,7 @@ ls -la docker-compose.prod.yml   # Docker Compose配置
 ls -la .env.production.example   # 配置模板
 
 # 最终目录结构
-# /Data/api-mvp/
+# /Data/earthquake-api-gateway/
 #   ├── project/                 ← 项目代码在这里
 #   │   ├── backend/
 #   │   ├── frontend/
@@ -328,7 +328,7 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs -f bac
 
 ```bash
 # 进入项目目录（在/Data下）
-cd /Data/api-mvp/project
+cd /Data/earthquake-api-gateway/project
 
 # 拉取最新代码
 git pull origin main

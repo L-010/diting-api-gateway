@@ -146,8 +146,8 @@
   ```
 - [ ] 已创建数据目录
   ```bash
-  sudo mkdir -p /Data/api-mvp/{mysql,brand-assets,backups/mysql}
-  sudo chmod 777 /Data/api-mvp
+  sudo mkdir -p /Data/earthquake-api-gateway/{mysql,brand-assets,backups/mysql}
+  sudo chmod 777 /Data/earthquake-api-gateway
   ```
 
 ### TLS证书准备

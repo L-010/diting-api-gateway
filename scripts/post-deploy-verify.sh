@@ -260,8 +260,8 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   local mysql_size=$(du -sh backend/data 2>/dev/null | cut -f1)
   echo_info "  后端数据目录: $mysql_size"
 
-  if [[ -d /Data/api-mvp/mysql ]]; then
-    local mysql_volume=$(du -sh /Data/api-mvp/mysql 2>/dev/null | cut -f1)
+  if [[ -d /Data/earthquake-api-gateway/mysql ]]; then
+    local mysql_volume=$(du -sh /Data/earthquake-api-gateway/mysql 2>/dev/null | cut -f1)
     echo_info "  MySQL数据卷: $mysql_volume"
   fi
 
@@ -358,8 +358,8 @@ if [[ -f scripts/backup-mysql.sh ]]; then
       test_pass "  备份执行成功"
 
       # 检查备份文件
-      if ls /Data/api-mvp/backups/mysql/*.sql* &>/dev/null 2>&1; then
-        local latest_backup=$(ls -t /Data/api-mvp/backups/mysql/*.sql* 2>/dev/null | head -1)
+      if ls /Data/earthquake-api-gateway/backups/mysql/*.sql* &>/dev/null 2>&1; then
+        local latest_backup=$(ls -t /Data/earthquake-api-gateway/backups/mysql/*.sql* 2>/dev/null | head -1)
         local backup_size=$(du -h "$latest_backup" | cut -f1)
         test_pass "  最新备份: $latest_backup ($backup_size)"
       fi

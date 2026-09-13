@@ -28,6 +28,11 @@ sudo usermod -aG docker "$USER"
 代码统一放在 `/Data/earthquake-api-gateway/project`，数据库、品牌资源和备份放在其父目录。首次部署直接克隆；已有旧项目目录时会先保留为带时间戳的备份目录，再重新克隆最新 `main` 并保留已有的 `.env.production`。
 
 ```bash
+set -Eeuo pipefail
+ENV_BACKUP=""
+cleanup_env_backup() { if [ -n "${ENV_BACKUP:-}" ]; then rm -f "$ENV_BACKUP"; fi; }
+trap cleanup_env_backup EXIT
+
 sudo mkdir -p /Data/earthquake-api-gateway/mysql
 sudo mkdir -p /Data/earthquake-api-gateway/brand-assets
 sudo mkdir -p /Data/earthquake-api-gateway/backups/mysql
@@ -35,7 +40,6 @@ sudo chown "$USER":"$USER" /Data/earthquake-api-gateway
 
 cd /Data/earthquake-api-gateway
 if [ -d project/.git ]; then
-  ENV_BACKUP=""
   if [ -f project/.env.production ]; then
     ENV_BACKUP="$(mktemp /tmp/earthquake-api-gateway-env.XXXXXX)"
     cp -p project/.env.production "$ENV_BACKUP"

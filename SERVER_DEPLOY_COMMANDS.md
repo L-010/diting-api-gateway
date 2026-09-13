@@ -24,7 +24,7 @@ sudo usermod -aG docker "$USER"
 
 ## 2. 拉取代码
 
-代码统一放在 `/Data/earthquake-api-gateway/project`，数据库、品牌资源和备份放在其父目录。下面的命令可以重复执行；已有项目目录时只会快进更新代码。
+代码统一放在 `/Data/earthquake-api-gateway/project`，数据库、品牌资源和备份放在其父目录。下面的命令可以重复执行；已有项目目录时会更新到远程 `main`，并保留已有的 `.env.production`。
 
 ```bash
 sudo mkdir -p /Data/earthquake-api-gateway/mysql
@@ -35,9 +35,31 @@ sudo chown -R "$USER":"$USER" /Data/earthquake-api-gateway
 cd /Data/earthquake-api-gateway
 if [ -d project/.git ]; then
   cd project
+  ENV_BACKUP=""
+  if [ -f .env.production ]; then
+    ENV_BACKUP="$(mktemp /tmp/earthquake-api-gateway-env.XXXXXX)"
+    cp -p .env.production "$ENV_BACKUP"
+  fi
   git fetch origin main
-  git checkout main
-  git pull --ff-only origin main
+  dirty_code="$(git status --porcelain --untracked-files=no | awk 'substr($0, 4) != ".env.production" {print}')"
+  if [ -n "$dirty_code" ]; then
+    if [ -n "$ENV_BACKUP" ]; then rm -f "$ENV_BACKUP"; fi
+    echo "项目目录有未提交的代码修改，请先备份并清理后再更新。"
+    exit 1
+  fi
+  set -- $(git rev-list --left-right --count HEAD...origin/main)
+  if [ "$1" -gt 0 ]; then
+    if [ -n "$ENV_BACKUP" ]; then rm -f "$ENV_BACKUP"; fi
+    echo "项目目录包含本地提交，未自动覆盖；请先备份后重新克隆。"
+    exit 1
+  fi
+  if [ -n "$ENV_BACKUP" ]; then rm -f .env.production; fi
+  git checkout -B main origin/main
+  if [ -n "$ENV_BACKUP" ]; then
+    cp "$ENV_BACKUP" .env.production
+    chmod 600 .env.production
+    rm -f "$ENV_BACKUP"
+  fi
 else
   git clone https://github.com/L-010/diting-api-gateway.git project
   cd project
@@ -54,7 +76,7 @@ test -f .env.production.example
 
 ## 3. 生成生产配置
 
-仓库不包含 `.env.production`，不会把任何生产密钥提交到 Git。使用仓库自带生成器创建配置：
+仓库不包含 `.env.production`，不会把任何生产密钥提交到 Git。首次部署或从旧版本升级时，请在生成器询问覆盖时输入 `y`，重新生成密钥和数据库密码；不要继续使用旧版本中曾经暴露的配置。
 
 ```bash
 cd /Data/earthquake-api-gateway/project

@@ -79,6 +79,7 @@ type AdminApiKey = {
   disabled_at: string | null;
   disable_reason: string;
   is_expired: boolean;
+  can_enable: boolean;
   rotation_hint: string;
   recent_failure_count: number;
   recent_rate_limited_count: number;

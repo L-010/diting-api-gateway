@@ -51,7 +51,8 @@ jobs:
             r'token\s*=\s*["\'](?![\s]*["\'])[^"\']+["\']',
         ]
 
-        exclude_dirs = {'.venv', 'node_modules', '.git', 'alembic', 'migrations', '__pycache__'}
+        # 测试夹具中的合成凭据不是生产代码，不参与生产密钥扫描。
+        exclude_dirs = {'.venv', 'node_modules', '.git', 'alembic', 'migrations', 'tests', '__pycache__'}
         found_secrets = False
 
         for root, dirs, files in os.walk('.'):

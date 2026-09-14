@@ -23,9 +23,28 @@ curl --version
 sudo usermod -aG docker "$USER"
 ```
 
-## 2. 拉取代码
+## 2. 上传并更新代码
 
-代码统一放在 `/Data/earthquake-api-gateway/project`，数据库、品牌资源和备份放在其父目录。首次部署直接克隆；已有旧项目目录时会先保留为带时间戳的备份目录，再重新克隆最新 `main` 并保留已有的 `.env.production`。
+代码统一放在 `/Data/earthquake-api-gateway/project`，数据库、品牌资源和备份放在其父目录。你的服务器位于 VPN 资源网络中，若服务器无法访问 GitHub，请使用下面的“本地打包上传”方式；它不依赖服务器的公网出口。不要把 Markdown 链接格式 `[https://...]` 粘贴到终端。
+
+### 2.1 本地电脑打包并上传
+
+在能访问 GitHub 的本地 Windows PowerShell 中执行。`git archive` 只打包远程 `main` 已提交内容，不会包含本地 `.env.production`：
+
+```powershell
+cd "C:\Users\LiuTao\Documents\ChatGPT\地震局API部署"
+git fetch origin main
+$Archive = Join-Path $env:TEMP "diting-api-gateway-main.tar.gz"
+git archive --format=tar.gz --prefix=project/ --output "$Archive" origin/main
+Get-FileHash "$Archive" -Algorithm SHA256
+scp "$Archive" yaozhx@10.2.4.46:/Data/
+```
+
+如果 VPN 资源门户不支持本地 `scp`，使用门户提供的文件上传功能，或使用 WinSCP/FileZilla 连接 `10.2.4.46`，把同一个压缩包上传到服务器 `/Data/` 目录。关键要求是压缩包最终位于服务器的 `/Data/diting-api-gateway-main.tar.gz`。
+
+### 2.2 服务器解压
+
+在服务器终端执行。首次部署直接创建 `project`；已有旧项目时先保留旧目录并迁移现有配置：
 
 ```bash
 set -Eeuo pipefail
@@ -39,7 +58,7 @@ sudo mkdir -p /Data/earthquake-api-gateway/backups/mysql
 sudo chown "$USER":"$USER" /Data/earthquake-api-gateway
 
 cd /Data/earthquake-api-gateway
-if [ -d project/.git ]; then
+if [ -e project ]; then
   if [ -f project/.env.production ]; then
     ENV_BACKUP="$(mktemp /tmp/earthquake-api-gateway-env.XXXXXX)"
     cp -p project/.env.production "$ENV_BACKUP"
@@ -51,7 +70,8 @@ if [ -d project/.git ]; then
     echo "检测到同名临时目录，请先清理后再更新。"
     exit 1
   fi
-  git clone https://github.com/L-010/diting-api-gateway.git "$NEW_PROJECT"
+  mkdir "$NEW_PROJECT"
+  tar -xzf /Data/diting-api-gateway-main.tar.gz -C "$NEW_PROJECT" --strip-components=1
   mv project "$OLD_PROJECT"
   mv "$NEW_PROJECT" project
   if [ -n "$ENV_BACKUP" ]; then
@@ -62,8 +82,9 @@ if [ -d project/.git ]; then
   fi
   cd project
 else
-  git clone https://github.com/L-010/diting-api-gateway.git project
-  cd project
+  mkdir project.new
+  tar -xzf /Data/diting-api-gateway-main.tar.gz -C project.new --strip-components=1
+  mv project.new project
 fi
 ```
 

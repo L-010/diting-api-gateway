@@ -261,7 +261,7 @@ echo -e "通过: ${GREEN}$CHECKS_PASSED${NC} | 失败: ${RED}$CHECKS_FAILED${NC}
 if [[ $CHECKS_FAILED -eq 0 ]]; then
   echo ""
   echo_success "✓ 所有关键检查已通过"
-  echo_success "可以继续执行部署: bash scripts/deploy-prod.sh --build"
+  echo_success "可以继续执行部署: bash scripts/deploy-prod.sh"
   exit 0
 else
   echo ""

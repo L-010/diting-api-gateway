@@ -143,10 +143,10 @@ grep -E '^(APP_ENV|MYSQL_DATABASE|MYSQL_USER|DATABASE_URL|FRONTEND_ORIGIN|PUBLIC
 cd /Data/earthquake-api-gateway/project
 bash scripts/pre-deploy-check.sh
 docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
-bash scripts/deploy-prod.sh --build
+bash scripts/deploy-prod.sh
 ```
 
-部署脚本会创建目录、构建镜像、启动 MySQL、执行 Alembic 迁移，然后启动 backend、frontend、email-worker 和 file-worker。迁移 head 必须是 `a6b7c8d9e0f1`；如果看到其他版本，先确认已拉取 `origin/main` 的最新代码，不要把环境变量改成旧版本。
+部署脚本会创建目录、构建镜像、启动 MySQL、执行 Alembic 迁移，然后启动 backend、frontend、email-worker 和 file-worker。默认命令会使用服务器已经存在的本地基础镜像，不强制访问 Docker Hub；`--build` 会额外尝试拉取基础镜像，VPN 隔离环境不要使用。迁移 head 必须是 `a6b7c8d9e0f1`；如果看到其他版本，先确认上传的是最新 `origin/main`，不要把环境变量改成旧版本。
 
 ## 5. 验证服务
 

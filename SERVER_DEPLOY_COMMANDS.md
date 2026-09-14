@@ -98,11 +98,15 @@ test -f .env.production.example
 
 ## 3. 生成生产配置
 
-仓库不包含 `.env.production`，不会把任何生产密钥提交到 Git。首次部署或从旧版本升级时，请在生成器询问覆盖时输入 `y`，重新生成密钥和数据库密码；不要继续使用旧版本中曾经暴露的配置。
+仓库不包含 `.env.production`，不会把任何生产密钥提交到 Git。首次部署且没有配置文件时才运行生成器；已有 `.env.production` 的升级必须保留原文件，尤其不能只修改数据库密码，否则会与已经初始化的 MySQL 用户密码不一致。曾经暴露过的密钥需要在停机和数据库轮换方案下单独更换，不要直接覆盖生产配置。
 
 ```bash
 cd /Data/earthquake-api-gateway/project
-bash scripts/gen-env-production.sh
+if [ -f .env.production ]; then
+  echo "已存在 .env.production，升级时保留现有配置。"
+else
+  bash scripts/gen-env-production.sh
+fi
 ```
 
 按提示填写：

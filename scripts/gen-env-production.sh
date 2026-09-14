@@ -58,11 +58,11 @@ if not hostname or hostname.lower() not in allowed:
 PY
 }
 
-read -r -p "前端访问地址 [http://10.2.210.10:3000]: " FRONTEND_ORIGIN
-FRONTEND_ORIGIN="${FRONTEND_ORIGIN:-http://10.2.210.10:3000}"
+read -r -p "前端访问地址 [http://10.2.4.46:3000]: " FRONTEND_ORIGIN
+FRONTEND_ORIGIN="${FRONTEND_ORIGIN:-http://10.2.4.46:3000}"
 validate_origin "$FRONTEND_ORIGIN" || die "前端访问地址格式不正确。"
-read -r -p "公开网关地址 [http://10.2.210.10:8000]: " PUBLIC_GATEWAY_BASE_URL
-PUBLIC_GATEWAY_BASE_URL="${PUBLIC_GATEWAY_BASE_URL:-http://10.2.210.10:8000}"
+read -r -p "公开网关地址 [http://10.2.4.46:8000]: " PUBLIC_GATEWAY_BASE_URL
+PUBLIC_GATEWAY_BASE_URL="${PUBLIC_GATEWAY_BASE_URL:-http://10.2.4.46:8000}"
 validate_origin "$PUBLIC_GATEWAY_BASE_URL" || die "公开网关地址格式不正确。"
 read -r -p "TomoDD 上游地址 [http://host.docker.internal:18000]: " TOMODD_BASE_URL
 TOMODD_BASE_URL="${TOMODD_BASE_URL:-http://host.docker.internal:18000}"
